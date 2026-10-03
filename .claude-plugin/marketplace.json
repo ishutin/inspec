@@ -1,0 +1,16 @@
+{
+  "name": "inspec",
+  "owner": {
+    "name": "Alex Ishutin"
+  },
+  "plugins": [
+    {
+      "name": "inspec",
+      "source": "./",
+      "description": "start, brief, spec, plan, build, review"
+    }
+  ],
+  "metadata": {
+    "description": "inspec: plan a change into intent, spec and plan docs, then build each PR in a fresh session."
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "name": "inspec",
+  "version": "0.1.0",
+  "description": "Lead a change from idea to built code: intent, spec and plan docs in docs/features/<slug>/, then each PR built and reviewed in a fresh session.",
+  "author": {
+    "name": "Alex Ishutin",
+    "email": "ishutin.alexey@gmail.com"
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/ishutin/inspec",
+  "repository": "https://github.com/ishutin/inspec"
+}
