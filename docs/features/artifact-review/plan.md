@@ -1,6 +1,6 @@
 ---
 name: Artifact review (IAR)
-status: todo
+status: done
 ---
 
 ## D1 — Prepare, open and wait
@@ -128,11 +128,11 @@ Log:
 - done
 
 ## D6 — The /inspec:read skill and the offer
-status: blocked
+status: done
 builds on: D2, D5
 - [x] S25
 - [x] S26
-- [ ] S27
+- [x] S27
 Notes: `skills/read/SKILL.md` (the session flow, the display subagent, wait in background, drop on chat), the
 offer in brief §3 (with the `- **O<n>** <text>` outcome format), spec §5 and plan before "Commit plan.md",
 the README row and `plugin.json` 0.3.0. Review, build and start keep their text. Only markdown and one version
@@ -145,7 +145,10 @@ Log:
 - S27 (qa), the part a CLI can run: a scratch repository (not committed) with a csv-export intent (O1, O2) and the Headline scenario's 9-block spec (overview, S1–S5, architecture, touches, not in scope); `prepare --lang ru` printed the 9 blocks; one `general-purpose` subagent got the printed blocks, `ru`, the intent's path, flags for S3 and S4 and the brief copied from SKILL.md, wrote 9 display files and replied with the 9 ids only; `open --no-open` exit 0; `wait` in the background; Playwright on the page: block 1 of 9 in Russian, English chrome, ⚑ on S3 and S4, Enter ×3 approved overview, S1, S2, "запятой" selected on S3 → change comment, S4 → question on the whole block, the rest approved, "Send 2 comments"; `wait` woke with `changes_requested` (c1-10 change on S3, c1-11 question on S4, 7 approved). As the session: S3 edited to a semicolon, `replies.json` written to the absolute git common dir, prepare printed S3 only and deleted replies.json, the same subagent (SendMessage) wrote S3 and replied "S3", `open` gave the same url; round 2: "7/9 approved", S3 "Changed" with the word diff (6 ins, 2 del) and its round-1 comment read-only, S4 with the answer under "Agent"; both approved, "Approve document", `wait` woke with `{"result":"approved","round":2}`. Display texts kept every number, path and command; two misses fixed in the brief: the subagent prefixed flags with `S3:` (brief now says without the `<id>:`) and wrote "юнит-тест" into checks the source does not call unit tests (brief now says the check comes from the source alone). Server stopped
 - verify: S25 and S26 checks green bare; `npm test` green (node 19/19, playwright 14/14); one earlier bare `node --test tests/read/` run had S6's opener test fail once on a missing opened.log (the recording opener had not written yet), green on three reruns: a timing flake in D1's test, no code of this delivery touches it; no lint or type commands in the repository; no server left running; review, build and start unchanged (`git diff` of them empty); whole diff read against Session flow and Offer placement
 - blocked on S27
-Blocked: S27 needs the operator's live run in a Claude Code session: the offer from a real /inspec:spec, the browser opening on its own, the session waking from a background `wait`, the display texts absent from the session's context, chat while the page is open (stop wait, drop), Node below 18, Windows, and a reconnect after a machine restart cannot be judged by a subagent. Everything a CLI can run holds (log above). To unblock: the operator runs the Headline scenario with `/inspec:spec` in a Claude Code session, checks S27's list, and ticks it or files what fails.
+Unblocked (was Blocked): S27 run by the QA subagent, see the log.
+- S27 (qa), run by a QA subagent on the operator's instruction (2026-10-05), acting as the session by skills/read/SKILL.md on d7 with this feature's 47-block spec in Russian: opens on the summary; one display subagent wrote all 48 texts, absent from the session's context; `wait` in the background with no time limit, woke on submit with changes_requested (selection change on S7, question on S18, a summary remark); edit + replies.json; round 2 with S7 diffed, the answers, "Changed since round 1"; second submit → approved; chat first → stop wait, drop, page back to the prepared round; Reconnecting… and recovery after stop/open; texts faithful (spot-checked 8 blocks). Six defects found, fixed in D8 (S34–S39). Not verified here: the offer inside a real /inspec:spec and the hand-off to /inspec:plan, the browser opening on its own, `/inspec:read <slug>` without a kind, Node below 18, Windows, reconnect after a machine restart. Screenshots: scratchpad qa/ and qa-fixed/.
+- done
+
 
 ## D7 — The document summary
 status: done
@@ -174,15 +177,15 @@ Log:
 - done
 
 ## D8 — Fixes from the live run
-status: blocked
+status: done
 builds on: D7
-Blocked: S39's check (`grep -qF 'remark on the document as a whole' skills/read/SKILL.md`) was green on the base (2edd130): D7 already wrote that phrase in SKILL.md §5, so the check cannot prove the row. The row's text is written (§5: a summary comment is acted on by editing the document through its owning skill or answered in `replies.json`, and never sent to the display subagent to reword the summary); S34–S38 hold. Unblock with a check through `/inspec:spec` that is red on 2edd130, e.g. `grep -qF 'never sent to the display' skills/read/SKILL.md`, then rerun the build to check S39 off and finish.
+Unblocked (was Blocked): S39's check changed through /inspec:spec to `grep -qF 'never sent to the display'`, red on d7, green here.
 - [x] S34
 - [x] S35
 - [x] S36
 - [x] S37
 - [x] S38
-- [ ] S39
+- [x] S39
 Notes: the six defects of the S27 QA run (scratchpad screenshots 10, 11, 12, 13, 20): a round published only
 after `open` accepts it (a `published` round in the state, set by `open`; the doc route serves the last
 published one), a translated `group` in the display entry and in SKILL.md's brief, diagram widths and the flow
@@ -203,3 +206,5 @@ Log:
 - S37 follow-up from the screenshots: the list's round cell took the top bar's `.round` pill; `.docs .cell.round` resets it
 - verify: qa-fixes.test 1/1 (S34), qa-fixes.spec 4/4 (S35–S38), prepare.test 7/7, server.test 12/12, summary.test 2/2, ui.spec 14/14, summary.spec 3/3, S25 S26 S33 greps exit 0, `npm test` green (node 22/22, playwright 21/21); no lint or type commands in the repository; no server left running; screenshots (scratchpad qa-fixed/): session-flow diagram at 1280 and 520, the document list light and dark, Russian group labels in the topic list, a tab on "Review sent" in round 1 after a round-2 prepare and in round 2 after `open`, a diff with deleted words light and dark; whole diff read against the rows and States (pre-D8 state without published.json is served as prepared; entries without `group` are refused by open and asked for again)
 - blocked on S39's check (see Blocked)
+- S39: check now red on d7 (exit 1) and green on d8 (exit 0)
+- done

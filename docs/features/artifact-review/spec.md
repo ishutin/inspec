@@ -149,7 +149,7 @@ Fixes from the live run:
   `tone` colours the cell whether or not it has a `tag`. — check: `npx playwright test tests/read/qa-fixes.spec.mjs`
 - **S39** `skills/read/SKILL.md` says a comment on the summary is a remark on the document as a whole: the
   session acts on it by editing the document through its owning skill or answers it in `replies.json`; it is
-  never sent to the display subagent as a request to reword the summary. — check: `grep -qF 'remark on the document as a whole' skills/read/SKILL.md`
+  never sent to the display subagent as a request to reword the summary. — check: `grep -qF 'never sent to the display' skills/read/SKILL.md`
 
 Skills and docs:
 
