@@ -81,11 +81,10 @@ The operator: the one person running an inspec session on their own machine, at 
 - Reviewing build output, code or plan.md's build log; only intent, spec and plan as written by those steps.
 - Switching the display language inside the tool.
 - Editing the document's text directly in the tool.
+- Any record of a passed review in the repository: agreeing is the operator's call, as it is today.
 
 ## Open
 
 - What the session does while the review is open and nobody sends it: how long it waits, and how the
   operator abandons it from chat.
-- Whether an agreed review leaves a record in the repository (for example a commit trailer), and what it
-  says.
 - Slug `artifact-review` and the skill's name (`/inspec:review` is taken by the code review): confirm.
