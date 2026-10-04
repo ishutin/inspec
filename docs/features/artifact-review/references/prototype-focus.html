@@ -133,7 +133,16 @@ ins{background:var(--ins);text-decoration:none}
 .F .toc .fl{margin-left:auto;color:var(--warn);font-size:12px}
 .F .stage{max-width:760px;width:100%;margin:28px auto;padding:0 16px}
 .F .nav{display:flex;justify-content:space-between;margin-top:14px;color:var(--muted);font-size:13px}
-@media (max-width:760px){.F{grid-template-columns:1fr}.F .toc{position:static;height:auto;border-right:0;border-bottom:1px solid var(--line);display:flex;overflow-x:auto;gap:4px}.F .toc .tg{display:none}.F .toc a{white-space:nowrap}}
+@media (max-width:760px){
+  .F{grid-template-columns:1fr;grid-template-rows:auto 1fr;min-height:0}
+  .F .toc{position:sticky;top:0;z-index:5;height:auto;background:var(--bg);border-right:0;border-bottom:1px solid var(--line);display:flex;align-items:center;overflow-x:auto;gap:4px;padding:8px 12px;scrollbar-width:none}
+  .F .toc .tg{display:none}
+  .F .toc a{flex:none;white-space:nowrap;padding:4px 10px;border:1px solid var(--line);border-radius:99px;font-size:13px}
+  .F .toc a.cur{border-color:var(--accent)}
+  .F .stage{margin:16px auto}
+  .card{padding:18px 16px}.card h2{font-size:19px}
+  .top{position:static}
+}
 </style>
 </head>
 <body>
@@ -259,6 +268,7 @@ function view(){const b=blocks[cur];let lastTag='';
 
 function render(){
   app.innerHTML=view();
+  const c=document.querySelector('.F .toc a.cur');c&&c.scrollIntoView({block:'nearest',inline:'center'});
   document.getElementById('round').textContent='Round '+round;
   const n=blocks.length,ok=blocks.filter(b=>st[b.id].status==='ok').length,cm=blocks.filter(b=>st[b.id].status==='cm').length,pending=n-ok-cm;
   bar.innerHTML=`<i style="width:${ok/n*100}%;background:var(--ok)"></i><i style="width:${cm/n*100}%;background:var(--cm-strong)"></i>`;
