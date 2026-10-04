@@ -102,7 +102,9 @@ Page (`skills/read/iar/ui/`), judged against `mockup.html`:
   diagram, each comment text and each source view. The interface is English (O2). — check:
   `npx playwright test tests/read/ui.spec.mjs`
 - **S22** Display markdown renders paragraphs, `-` and `1.` lists, bold, italic, inline and fenced code, pipe
-  tables and http(s) links as elements; raw HTML, `<script>` and `javascript:` links render as inert text. —
+  tables and http(s) links as elements; `tldr`, `title`, `check` and `flag` render the inline part (bold,
+  italic, code) the same way. Raw HTML, `<script>`, `javascript:` links and any `<…>` render as inert text,
+  so `- **O<n>**` inside a code span shows character for character. —
   check: `npx playwright test tests/read/ui.spec.mjs`
 - **S23** Each diagram type (flow, matrix, states, compare) renders as elements holding every text of its
   entry, with backtick spans as code and any other markup as inert text. At 760 px or less, a flow stacks its
@@ -151,7 +153,7 @@ Outside the tree, per document: `$(git rev-parse --git-dir)/inspec-read/<slug>/<
   `{section, title, tldr, body, check, flag, covers, diagram}`:
   - `section`: the `##` heading in `lang`.
   - `title`: the block's id token, then ` · ` and a short name in `lang`; without a token, the name alone.
-  - `tldr`: one sentence.
+  - `tldr`: one sentence. Literal syntax (markdown, paths with `<…>`) goes in a code span.
   - `body`: markdown in `lang`. It is the source rewritten for a technical person to read easily, not
     simplified. Every fact, number, name, condition, command and path stays, and nothing is added. The id
     token and the check move to their own fields. Order, lists, short paragraphs and plain sentences serve the
