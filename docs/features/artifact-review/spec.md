@@ -6,7 +6,7 @@ status: done
 # Artifact review (IAR): spec
 
 `/inspec:read` opens an intent, spec or plan as a local web page of short blocks to approve or comment on, and
-returns the verdict to the session. Intent: `docs/features/artifact-review/intent.md` (outcomes O1–O12).
+returns the verdict to the session. Intent: `docs/features/artifact-review/intent.md` (outcomes O1–O13).
 
 ## Contract
 
@@ -14,8 +14,8 @@ Prepare (CLI `skills/read/iar/iar.mjs`):
 
 - **S1** `prepare <md> --id <slug>/<kind> --lang <tag>` splits the document by the Split rules (Architecture)
   and prints one JSON object per block it needs a display for. On the fixtures the block ids, in order, are:
-  intent → `problem, who, O1, O2, O3, O4, O5, O6, O7, O8, O9, O10, O11, O12, headline-scenario, references,
-  not-in-scope`; plan → `D1, D2`; spec → the list in `tests/read/fixtures/spec.ids`, taken from this file as
+  intent → `problem, who, O1, O2, O3, O4, O5, O6, O7, O8, O9, O10, O11, O12, O13, headline-scenario,
+  references, not-in-scope`; plan → `D1, D2`; spec → the list in `tests/read/fixtures/spec.ids`, taken from this file as
   committed. — check: `node --test --test-timeout=30000 tests/read/prepare.test.mjs`
 - **S2** A block's hash depends only on its own source: two prepares give the same hashes; editing one block
   changes that block's hash and no other; trailing spaces and trailing blank lines change none. — check:
@@ -317,7 +317,7 @@ Tests run `open` with `--no-open` in a temporary git repository and `stop` the s
 - Actors: another local process without the token (S6); another process on the stored port (S7); two
   documents open at once (S28).
 - Load and limits: a one-block document (S1 with a minimal fixture inside prepare.test) and this spec's
-  41 blocks (S1, S15).
+  42 blocks (S1, S15).
 
 ## References
 
