@@ -68,10 +68,10 @@ write display texts yourself: they stay out of this session's context. Pass it:
 >   code spans; literal markdown the source talks about (`- **O<n>**`, `<slug>`) goes in a code span too.
 >   Markdown available: paragraphs, `-` and `1.` lists, **bold**, *italic*, inline and fenced code, pipe
 >   tables, http(s) links. Raw HTML renders as text.
-> - `check`: for a contract row (`S<n>`), one sentence on what proves it, with its command in inline code;
->   otherwise `null`.
-> - `flag`: the text given for this block in the flags list below, in `<lang>`; otherwise `null`. Never invent
->   one.
+> - `check`: for a contract row (`S<n>`), one sentence on what proves it, from the source alone, with its
+>   command in inline code; otherwise `null`.
+> - `flag`: the choice given for this block in the flags list below, in `<lang>`, without the `<id>:`; otherwise
+>   `null`. Never invent one.
 > - `covers`: for a contract row, `[{id, text}]` naming each intent outcome (`O<n>`) the row serves, with the
 >   outcome's text in `<lang>` from the intent; otherwise `[]`.
 > - `diagram`: `null` for most blocks. Set one only where a picture shows the content better than text: a flow
