@@ -48,7 +48,8 @@ Sections:
 
 - **Problem** — the user's current experience and its harm.
 - **Who** — the people affected and in which situation.
-- **Outcomes** — what a user sees or can do when it works; observable, never the mechanism. Each names who
+- **Outcomes** — what a user sees or can do when it works; observable, never the mechanism. One item each,
+  written `- **O<n>** <text>` (`O1`, `O2`, …) so later steps can cite it. Each names who
   observes it and the situations they meet it in (first use and return, an error, the weakest supported device,
   no network, another platform); a situation whose result is a product choice is settled here.
 - **Headline scenario** — one end-to-end walk through the change, step by step, as a user takes it. The spec's
@@ -62,6 +63,10 @@ Write in your own words, each thing once; quote exactly only text the product mu
 character. Length follows the change: a small one is short.
 
 Before committing, reread it: every outcome is one someone could observe, and no scenario step skips a choice.
+
+Then ask the operator: "Agree as is, edit in chat, or open the review with /inspec:read." Edit in chat and
+ask again; for the review, follow `/inspec:read <slug> intent` on the file as it is until it comes back
+approved. Commit once they agree.
 
 ## 4. Commit and hand off
 

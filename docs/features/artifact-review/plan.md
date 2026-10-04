@@ -130,10 +130,15 @@ Log:
 ## D6 — The /inspec:read skill and the offer
 status: todo
 builds on: D2, D5
-- [ ] S25
-- [ ] S26
+- [x] S25
+- [x] S26
 - [ ] S27
 Notes: `skills/read/SKILL.md` (the session flow, the display subagent, wait in background, drop on chat), the
 offer in brief §3 (with the `- **O<n>** <text>` outcome format), spec §5 and plan before "Commit plan.md",
 the README row and `plugin.json` 0.3.0. Review, build and start keep their text. Only markdown and one version
 line: ~5 source lines.
+Log:
+- started from df81e2e (branch from feature/artifact-review-d5, one linear chain); S25 and S26 red (the offer sentence, the outcome format and skills/read/SKILL.md missing); S27 is qa
+- S26: `skills/read/SKILL.md` (`name: read`, argument `<slug> [intent|spec|plan]`): the Session flow as six steps (Node ≥ 18 check with the chat fallback, lang, the document from the working tree or `git show` into a temp `<kind>.md`, prepare, one `general-purpose` display subagent with no model override and its full brief from State's display rules, replying only with ids, a retry of refused ids through SendMessage after `open` exits 2, `open` then `wait` with `run_in_background: true`, approved / changes_requested with `replies.json` written to the absolute git common dir before prepare, chat first → stop wait, `drop`); the CLI is found through the skill's base directory; brief's Outcomes now say `- **O<n>** <text>`
+- S25: the sentence "Agree as is, edit in chat, or open the review with /inspec:read." is the new last step of brief §3 (after the reread, before the commit), in spec §5 between proving and the commit (now prove → offer → `status: done` once agreed → commit; heading "Prove, agree, commit, hand off") and in plan before "Commit plan.md"; README's table has the `/inspec:read` row; review, build and start unchanged
+- addition outside the rows, at the operator's request: README has a section "Review in the browser" (what the review is, the offer in brief/spec/plan, `/inspec:read`, Node 18+ on macOS/Linux/Windows, one stable link per document, a pointer to `references/demo-spec.html`); `plugin.json` version 0.3.0 and its description and the marketplace's plugin description mention the browser review (marketplace.json carries no version)
