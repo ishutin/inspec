@@ -64,7 +64,7 @@ builds on: D1
 - [x] S15
 - [x] S17
 - [x] S18
-- [ ] S21
+- [x] S21
 - [ ] S22
 Notes: `ui/index.html`, `app.js` (topic list with groups, focus card, keyboard, approve, submit button states,
 3 s polling, round switch, Reconnecting…), `md.js` (the one renderer, used for fields and Show source),
@@ -78,6 +78,7 @@ Log:
 - S10: the page keeps no review of its own: every change is PUT to the server at once and the page reads it back, so a reload, `stop` + `open` (same url) and a prepare rerun show the approvals (approvals only, as the notes say; D4 extends it to comments); test seen red on the placeholder
 - S17: Show source renders `blocks[].source` with `md.js` `block()`, the same function as the body; the test compares the view with md.js's own output for S1 and a fenced Architecture block, and checks heading, list, bold and code as elements; seen red on the placeholder
 - S18: submit reads "N to review" (disabled) / "Send N comments" (N = this round's comments; "comment" when N is 1, a wording choice) / "Approve document"; after a submit the card shows "Review sent. Waiting for the session…", controls off; polling every 3 s (1.5 s while unreachable, paused while hidden) adopts any changed payload, so a new round switches the tab in place (no reload); a failed fetch shows "Reconnecting…" with `/inspec:read <slug> <kind>`, disables approve, comment and submit, and clears on the next good poll. D2's note: the page re-reads after its own PUT (forgets the last payload) so a drop back to that payload still re-renders, and local edits are kept only while unsent; a page-level drop test (S11 page) checks both; seen red on the placeholder
+- S21: every display field, section and title in the topic list, group label, comment text, quote, the comment box and the source view carry `data-content`; the covers ids carry it too because their title holds outcome text; the test scans every element's own text, attributes and value outside `[data-content]` on four blocks, with the source shown and a Russian draft in the comment box; seen red on the placeholder
 
 ## D4 — Comments, theme, narrow layout and diagrams
 status: todo
