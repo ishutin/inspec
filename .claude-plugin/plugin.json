@@ -1,6 +1,6 @@
 {
   "name": "inspec",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Lead a change from idea to built code: intent, spec and plan docs in docs/features/<slug>/, then each PR built and reviewed in a fresh session.",
   "author": {
     "name": "Alex Ishutin",

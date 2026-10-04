@@ -61,15 +61,9 @@ Sections:
 Write in your own words, each thing once; quote exactly only text the product must show character for
 character. Length follows the change: a small one is short.
 
-## 4. One fresh review
+Before committing, reread it: every outcome is one someone could observe, and no scenario step skips a choice.
 
-Start one `general-purpose` subagent with only the path of intent.md (nothing from this conversation). It
-reads the file cold and reports gaps (an outcome nobody could observe, a scenario step that skips a choice) and
-contradictions, without editing. Settle each finding: one the file already answers is dropped; an editorial gap
-you fix; a product gap goes to the operator in a round. The review runs once; never start a second reader.
-Tell the operator in one line what it found and how each ended.
-
-## 5. Commit and hand off
+## 4. Commit and hand off
 
 Commit only intent.md and its references folder on `feature/<slug>`, never on the base and never with other
 changes in the checkout. If the branch exists, switch to it; otherwise `git switch -c feature/<slug>` from the

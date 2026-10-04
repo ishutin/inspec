@@ -100,8 +100,11 @@ Start one `general-purpose` subagent with only the paths of intent.md (if any) a
 as the session that builds it will, with the code they cite, and reports without editing: every place it would
 have to guess (a name, a shape, a which, an expected value), a check through a proxy (rule 1), a state no row
 decides (2), an all-claim without its population (3), a check a correct tree would fail or a wrong tree pass
-(4), an outcome no row covers. Settle each finding: drop one the file already answers,
-fix a technical gap yourself, take a product gap to the operator. The review runs once; never a second reader.
+(4), an outcome no row covers, an intent outcome nobody could observe, a claim about existing code or data
+that the cited code contradicts. Settle each finding: drop one the file already answers, and a guess whose every
+answer gives the same observable behaviour; fix a technical gap yourself, take a product gap to the operator.
+The review runs once; never a second reader. Past about 15 findings the spec is too big: cut scope or split the
+feature with the operator, not another round.
 
 ## 5. Prove, commit, hand off
 
@@ -115,8 +118,11 @@ branch the operator is on.
 
 ```
 git add docs/features/<slug>/spec.md
-git commit -m "docs(<slug>): spec"
+git commit -m "docs(<slug>): spec" -m "Review: 12 — guess 5, state 3, premise 2; fixed 9, asked 1, dropped 2"
 ```
+
+The `Review:` trailer counts the findings by class and by how each ended. Every few features, turn a class
+that keeps coming back into a rule of §2 or a `references/` file.
 
 Set `status: done` once the operator agrees and nothing is Open. Switch back to the operator's branch, report
 the rows and any open question in a few lines, and go on to `/inspec:plan <slug>` in this session.
