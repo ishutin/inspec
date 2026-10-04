@@ -6,7 +6,7 @@ status: done
 # Artifact review (IAR): spec
 
 `/inspec:read` opens an intent, spec or plan as a local web page of short blocks to approve or comment on, and
-returns the verdict to the session. Intent: `docs/features/artifact-review/intent.md` (outcomes O1–O13).
+returns the verdict to the session. Intent: `docs/features/artifact-review/intent.md` (outcomes O1–O14).
 
 ## Contract
 
@@ -117,6 +117,23 @@ Page (`skills/read/iar/ui/`), judged against `mockup.html`:
 - **S24** The page matches `mockup.html` in layout, spacing and colour in light and dark, at 1280×800 and
   520×800, in round 1 and round 2. — qa
 
+Document summary:
+
+- **S29** prepare also prints an entry with id `summary` when `display/summary.<hash>.<lang>.json` is missing,
+  where `<hash>` is the first 12 hex of sha256 over the document's block hashes in order; it is not a block of
+  `blocks.json`. `open` refuses (exit 2, naming `summary`) when that entry is missing or breaks its schema
+  `{tldr, body, diagram}`. — check: `node --test --test-timeout=30000 tests/read/summary.test.mjs`
+- **S30** The page opens on the summary screen, "About this document": summary, body and diagram, and a "Start
+  review" button that, like Enter, goes to the first block not approved. The topic list shows "Summary" first,
+  with no status dot; progress, "n of N" and the submit counts leave it out. — check: `npx playwright test tests/read/summary.spec.mjs`
+- **S31** A comment on the summary, by selection or as a whole, is kept like a block comment, counts in "Send N
+  comments", never blocks a submit, and reaches the result as a feedback entry `{"block":"summary","hash":<summary
+  hash>,"comments":[…]}`; in the next round it shows read-only on the summary with its reply. — check: `npx playwright test tests/read/summary.spec.mjs`
+- **S32** From round 2 on, the summary screen lists "Changed since round K": every block that is "Changed" or
+  "Changed after approval" and every comment with an agent reply, each a link to its block. — check: `npx playwright test tests/read/summary.spec.mjs`
+- **S33** `skills/read/SKILL.md`'s subagent brief asks for the summary entry, written by the display rules from
+  the whole document. — check: `grep -qF 'display/summary' skills/read/SKILL.md`
+
 Skills and docs:
 
 - **S25** The sentence "Agree as is, edit in chat, or open the review with /inspec:read." is in
@@ -124,7 +141,7 @@ Skills and docs:
   `/inspec:read`. — check: `grep -qF 'or open the review with /inspec:read' skills/brief/SKILL.md && grep -qF 'or open the review with /inspec:read' skills/spec/SKILL.md && grep -qF 'or open the review with /inspec:read' skills/plan/SKILL.md && grep -qF '/inspec:read' README.md`
 - **S26** `skills/brief/SKILL.md` says outcomes are written `- **O<n>** <text>`, and `skills/read/SKILL.md` exists
   with `name: read`. — check: `grep -qF -- '- **O<n>**' skills/brief/SKILL.md && grep -qx 'name: read' skills/read/SKILL.md`
-- **S27** In a Claude Code session the Headline scenario runs end to end. The offer comes before the spec's
+- **S27** In a Claude Code session the Headline scenario runs end to end, opening on the summary. The offer comes before the spec's
   commit, the page opens on its own, and the session waits with no time limit and wakes on submit. It edits, and
   round 2 opens with S3 diffed and S4 answered; the second submit takes the session on to `/inspec:plan`. Also
   check: each block's text reads as the source rewritten for a technical reader, with every fact, number, name
@@ -177,6 +194,11 @@ so every worktree of the repository shares one server and one state):
       with one cell per column;
     - `states`: `{transitions:[{from, to, on}]}`;
     - `compare`: `{before:{label, text}, after:{label, text}}`.
+
+- `display/summary.<hash>.<lang>.json`: the document summary (S29), written by the same subagent:
+  `{tldr, body, diagram}`. `tldr` says what the document is for in one sentence; `body` gives its main points
+  and decisions and where it stops, at most 200 words; only what the document says, nothing added; `diagram`
+  as above. Its hash covers every block hash, so it is rewritten whenever the document changes.
 
   This cache is what makes O9 hold: prepare never asks twice for a hash.
 - `review.json`: `{round, blocks:{<id>:{status:"new"|"ok"|"cm"|"chg", hash, approvedRound, prevHash, wasApproved,
@@ -242,7 +264,7 @@ operator picks the review there.
 3. Pick the document: the working-tree file when it is there, else
    `git show feature/<slug>:docs/features/<slug>/<kind>.md` into a temp file named `<kind>.md`.
 4. Run `node <skill dir>/iar/iar.mjs prepare <md> --id <slug>/<kind> --lang <lang>`. If it prints any block,
-   start one `general-purpose` subagent (no model override) with the printed blocks, `lang`, the intent's path,
+   start one `general-purpose` subagent (no model override) with the printed blocks (and the summary entry), `lang`, the intent's path,
    the display rules of State, and the flags as a list of block id and text (only the session knows them). The
    subagent writes every `display/<hash>.<lang>.json` and replies with the ids it wrote, so the texts stay out
    of the session's context. If `open` then refuses an entry (S5), the same subagent is asked again for those
@@ -331,6 +353,7 @@ Tests run `open` with `--no-open` in a temporary git repository and `stop` the s
 ## Not in scope
 
 - Splitting a section further than its id items, `###` subsections and prose runs.
+- Approving the summary: it is a reading aid, never under review.
 - Agent's-decision flags in a session that did not write the document.
 - Several reviewers, sharing, remote hosting.
 - Reaching the server from another machine.

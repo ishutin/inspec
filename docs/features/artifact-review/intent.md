@@ -60,13 +60,19 @@ The operator: the one person running an inspec session on their own machine, at 
 - **O13 A diagram where it helps.** A block whose content reads better as a picture (a flow, a set of
   states and transitions, a matrix of cases, a before and after) shows a diagram under its text, drawn in the
   tool's own style and theme. Most blocks have none; the diagram repeats the text, never replaces it.
+- **O14 The picture first.** The review opens on a summary of the whole document, before the first block, in
+  the operator's language: what the document is for, its main points and decisions, and where it stops, with a
+  diagram where it helps. It is a reading aid, not under review: it has no approval and does not count toward
+  progress. The operator can comment on it, by selection or as a whole, and such a comment reaches the session
+  as a remark on the document as a whole. From the second round on, the same screen also lists what changed
+  since the last submit (changed blocks and the agent's answers), each linking to its block.
 
 ## Headline scenario
 
 1. `/inspec:spec` finishes `spec.md` for `csv-export` and asks: agree, edit in chat, or open the artifact
    review. The operator picks the review.
-2. The browser opens on block 1 of 9, in Russian, the language the operator has been writing in, each block
-   rewritten for reading. The left
+2. The browser opens on the document's summary, in Russian, the language the operator has been writing in;
+   they read it and start the review on block 1 of 9, each block rewritten for reading. The left
    list shows Overview, Contract S1–S5, Architecture, Touches, Not in scope; S3 and S4 carry the ⚑ flag.
 3. They approve Overview and S1 with Enter, moving to the next block each time.
 4. On S3 they select "comma" and comment, as a change: "Excel in the Russian locale expects a semicolon".

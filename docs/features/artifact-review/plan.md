@@ -146,3 +146,17 @@ Log:
 - verify: S25 and S26 checks green bare; `npm test` green (node 19/19, playwright 14/14); one earlier bare `node --test tests/read/` run had S6's opener test fail once on a missing opened.log (the recording opener had not written yet), green on three reruns: a timing flake in D1's test, no code of this delivery touches it; no lint or type commands in the repository; no server left running; review, build and start unchanged (`git diff` of them empty); whole diff read against Session flow and Offer placement
 - blocked on S27
 Blocked: S27 needs the operator's live run in a Claude Code session: the offer from a real /inspec:spec, the browser opening on its own, the session waking from a background `wait`, the display texts absent from the session's context, chat while the page is open (stop wait, drop), Node below 18, Windows, and a reconnect after a machine restart cannot be judged by a subagent. Everything a CLI can run holds (log above). To unblock: the operator runs the Headline scenario with `/inspec:spec` in a Claude Code session, checks S27's list, and ticks it or files what fails.
+
+## D7 — The document summary
+status: todo
+builds on: D6
+- [ ] S29
+- [ ] S30
+- [ ] S31
+- [ ] S32
+- [ ] S33
+Notes: prepare's `summary` entry and its hash, `open`'s schema check for it, the summary screen before the
+first block (topic list item without a dot, left out of progress and counts), comments on it carried like a
+block's with `"block":"summary"` in the result, the "Changed since round K" list from round 2, and the
+subagent brief in `skills/read/SKILL.md`. New test files `tests/read/summary.test.mjs` and
+`tests/read/summary.spec.mjs`. ~200 source lines.
