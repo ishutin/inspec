@@ -701,8 +701,9 @@ let round=1, blocks=JSON.parse(JSON.stringify(R1)), st={}, cur=0, showSrc=new Se
 blocks.forEach(b=>st[b.id]={status:'new',comments:[]});
 function localGet(k){try{return localStorage.getItem(k)}catch(e){return null}}
 function localSet(k,v){try{localStorage.setItem(k,v)}catch(e){}}
-try{const saved=JSON.parse(localGet('iar.demo-spec'));if(saved){({round,st,cur}=saved);if(saved.blocks)blocks=saved.blocks}}catch(e){}
-function save(){localSet('iar.demo-spec',JSON.stringify({round,st,cur,blocks}))}
+// progress only: the texts always come from the page, so a newer build is never hidden by a stale copy
+try{const saved=JSON.parse(localGet('iar.demo-spec'));if(saved&&saved.st&&blocks.every(b=>saved.st[b.id])){({round,st,cur}=saved)}}catch(e){}
+function save(){localSet('iar.demo-spec',JSON.stringify({round,st,cur}))}
 
 /* ---------- theme ---------- */
 function setTheme(t){if(t==='system')document.documentElement.removeAttribute('data-theme');else document.documentElement.dataset.theme=t;
