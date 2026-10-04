@@ -24,7 +24,7 @@ const ids = (blocks) => only(blocks).map((b) => b.id);
 const byId = (blocks) => Object.fromEntries(only(blocks).map((b) => [b.id, b.hash]));
 
 test('S1 intent splits into its sections and outcomes', () => {
-  const o = Array.from({ length: 13 }, (_, i) => `O${i + 1}`);
+  const o = Array.from({ length: 14 }, (_, i) => `O${i + 1}`);
   assert.deepEqual(ids(prepare(repo(), 'intent')), ['problem', 'who', ...o, 'headline-scenario', 'references', 'not-in-scope']);
 });
 
