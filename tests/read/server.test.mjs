@@ -373,3 +373,30 @@ test('S28 the default idle time is 8 hours', async () => {
   const { IDLE_MS } = await import('../../skills/read/iar/lib/server.mjs');
   assert.equal(IDLE_MS, 8 * 60 * 60 * 1000);
 });
+
+test('security: the state root is 0700 and server.json and the state files are 0600', { skip: process.platform === 'win32' && 'POSIX modes' }, async (t) => {
+  const repo = mkRepo();
+  t.after(() => {
+    iar(['stop'], { cwd: repo });
+    fs.rmSync(repo, { recursive: true, force: true });
+  });
+  const root = stateRoot(repo);
+  // A root and server.json left readable by an older version get tightened.
+  fs.mkdirSync(root, { mode: 0o755 });
+  fs.chmodSync(root, 0o755);
+  fs.writeFileSync(path.join(root, 'server.json'), '{}', { mode: 0o644 });
+  fs.chmodSync(path.join(root, 'server.json'), 0o644);
+  writeDisplays(prepare(repo, 'plan'));
+  const a = open(repo);
+  await review(a.api, { D1: { status: 'ok' }, D2: { status: 'ok' } });
+  assert.equal((await submit(a.api)).status, 200);
+  const mode = (p) => fs.statSync(p).mode & 0o777;
+  assert.equal(mode(root), 0o700, 'root');
+  assert.equal(mode(path.join(root, 'server.json')), 0o600, 'server.json');
+  for (const f of ['blocks.json', 'review.json', 'start.json', 'result.json']) assert.equal(mode(path.join(stateDir(repo, 'plan'), f)), 0o600, f);
+
+  iar(['stop'], { cwd: repo });
+  fs.rmSync(root, { recursive: true, force: true });
+  prepare(repo, 'plan');
+  assert.equal(mode(root), 0o700, 'root created by prepare');
+});

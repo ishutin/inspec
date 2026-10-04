@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { UsageError, parseId, checkLang, rootDir, docDir, prepare, load, badDisplays, drop, readJSON } from './lib/state.mjs';
+import { UsageError, parseId, checkLang, rootDir, ensureRoot, docDir, prepare, load, badDisplays, drop, readJSON } from './lib/state.mjs';
 
 const SERVER = path.join(path.dirname(fileURLToPath(import.meta.url)), 'lib', 'server.mjs');
 const USAGE = `usage:
@@ -54,8 +54,8 @@ async function running(root) {
 async function ensureServer(root) {
   const live = await running(root);
   if (live) return live;
-  fs.mkdirSync(root, { recursive: true });
-  const log = fs.openSync(path.join(root, 'server.log'), 'a');
+  ensureRoot(root);
+  const log = fs.openSync(path.join(root, 'server.log'), 'a', 0o600);
   const child = spawn(process.execPath, [SERVER, root], { detached: true, stdio: ['ignore', log, log], windowsHide: true });
   child.unref();
   fs.closeSync(log);

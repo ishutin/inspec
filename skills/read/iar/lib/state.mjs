@@ -47,10 +47,19 @@ export function readJSON(file, fallback = null) {
   }
 }
 
+// The state root holds server.json and its token: only its owner may read it.
+export function ensureRoot(root) {
+  fs.mkdirSync(root, { recursive: true, mode: 0o700 });
+  if (process.platform !== 'win32') fs.chmodSync(root, 0o700);
+  return root;
+}
+
+// Every state file is 0600, written to a tmp file and renamed over the old one.
 export function writeJSON(file, value) {
-  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.mkdirSync(path.dirname(file), { recursive: true, mode: 0o700 });
   const tmp = `${file}.${process.pid}.tmp`;
-  fs.writeFileSync(tmp, JSON.stringify(value, null, 1));
+  fs.writeFileSync(tmp, JSON.stringify(value, null, 1), { mode: 0o600 });
+  if (process.platform !== 'win32') fs.chmodSync(tmp, 0o600);
   fs.renameSync(tmp, file);
 }
 
@@ -67,7 +76,7 @@ export function prepare(mdPath, { slug, kind, lang, cwd }) {
   } catch (e) {
     throw new UsageError(`${mdPath}: ${e.message}`);
   }
-  const root = rootDir(cwd);
+  const root = ensureRoot(rootDir(cwd));
   const dir = docDir(root, slug, kind);
 
   const result = readJSON(path.join(dir, 'result.json'));

@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { readJSON, writeJSON, docDir, load, displayPath, applyReview, submit, KINDS } from './state.mjs';
+import { readJSON, writeJSON, ensureRoot, docDir, load, displayPath, applyReview, submit, KINDS } from './state.mjs';
 
 export const BASE_PORT = 47100;
 // The server exits after this long with no request (S28); INSPEC_READ_IDLE_MS overrides it for tests.
@@ -164,6 +164,7 @@ function listen(server, port) {
 
 // Listens on the stored port, or the first free one from BASE_PORT up; writes server.json.
 export async function serve(root) {
+  ensureRoot(root);
   const file = path.join(root, 'server.json');
   const saved = readJSON(file) || {};
   const token = /^[0-9a-f]{32}$/.test(saved.token || '') ? saved.token : randomBytes(16).toString('hex');
