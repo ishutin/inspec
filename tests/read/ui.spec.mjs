@@ -675,3 +675,62 @@ test('S23 each diagram type renders every text, code spans as code, other markup
     }
   }
 });
+
+test('S19 theme: System follows the scheme, Light and Dark override it and survive a reload, throwing storage renders System', async ({ page, browser }) => {
+  const d = setup('plan');
+  const colours = (p) => p.evaluate(() => ({ bg: getComputedStyle(document.body).backgroundColor, ink: getComputedStyle(document.body).color }));
+  const on = (p) => p.locator('#themeSeg button.on');
+
+  await page.emulateMedia({ colorScheme: 'light' });
+  await page.goto(d.url);
+  await expect(card(page).locator('h2')).toHaveText('Name of D1');
+  await expect(on(page)).toHaveText('System');
+  const light = await colours(page);
+  await page.emulateMedia({ colorScheme: 'dark' });
+  const dark = await colours(page);
+  expect(dark.bg).not.toBe(light.bg);
+  expect(dark.ink).not.toBe(light.ink);
+
+  // Light overrides a dark scheme, and survives a reload.
+  await page.locator('#themeSeg').getByRole('button', { name: 'Light' }).click();
+  expect(await colours(page)).toEqual(light);
+  await page.reload();
+  await expect(on(page)).toHaveText('Light');
+  expect(await colours(page)).toEqual(light);
+  // Dark overrides a light scheme, and survives a reload.
+  await page.emulateMedia({ colorScheme: 'light' });
+  await page.locator('#themeSeg').getByRole('button', { name: 'Dark' }).click();
+  expect(await colours(page)).toEqual(dark);
+  await page.reload();
+  await expect(on(page)).toHaveText('Dark');
+  expect(await colours(page)).toEqual(dark);
+  // System follows the scheme again.
+  await page.locator('#themeSeg').getByRole('button', { name: 'System' }).click();
+  expect(await colours(page)).toEqual(light);
+  await page.reload();
+  await expect(on(page)).toHaveText('System');
+  await page.emulateMedia({ colorScheme: 'dark' });
+  expect(await colours(page)).toEqual(dark);
+
+  // Storage that throws: the page still renders, in System.
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 }, colorScheme: 'dark' });
+  const p2 = await ctx.newPage();
+  await p2.addInitScript(() => {
+    localStorage.setItem('iar.theme', 'light');
+    Object.defineProperty(window, 'localStorage', { configurable: true, get() { throw new DOMException('blocked', 'SecurityError'); } });
+  });
+  const errors = [];
+  p2.on('pageerror', (e) => errors.push(e.message));
+  await p2.goto(d.url);
+  await expect(p2.locator('.toc a.topic')).toHaveCount(2);
+  await expect(p2.locator('.card h2')).toHaveText('Name of D1');
+  await expect(on(p2)).toHaveText('System');
+  expect(await colours(p2)).toEqual(dark);
+  await p2.locator('#themeSeg').getByRole('button', { name: 'Light' }).click();
+  expect(await colours(p2)).toEqual(light);
+  await p2.reload();
+  await expect(on(p2)).toHaveText('System');
+  expect(await colours(p2)).toEqual(dark);
+  expect(errors).toEqual([]);
+  await ctx.close();
+});
