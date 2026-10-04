@@ -272,7 +272,7 @@ const DIAGRAMS = {
       .map(
         (r) =>
           `<div class="r">${code(r.label)}</div>${r.cells
-            .map((c) => `<div>${c.tag ? `<span class="st ${TONE[c.tone] || 'new'}">${code(c.tag)}</span><br>` : ''}${code(c.text)}</div>`)
+            .map((c) => `<div${Object.hasOwn(TONE, c.tone) ? ` class="t-${c.tone}"` : ''}>${c.tag ? `<span class="st ${TONE[c.tone] || 'new'}">${code(c.tag)}</span><br>` : ''}${code(c.text)}</div>`)
             .join('')}`,
       )
       .join('')}</div>`,
@@ -494,8 +494,8 @@ function highlight() {
 
 function paint(el, q, mineToo) {
   const nodes = [];
-  // Deleted words of a diff (S13) are not part of the text a quote was taken from.
-  const w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, { acceptNode: (n) => (n.parentElement.closest('del') ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT) });
+  // Deleted words of a diff (S13) and the spaces set around them (S38) are not part of the text a quote was taken from.
+  const w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, { acceptNode: (n) => (n.parentElement.closest('del, .ds') ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT) });
   for (let n; (n = w.nextNode()); ) nodes.push(n);
   // The collapsed text, with each of its characters' node and offset.
   let text = '';

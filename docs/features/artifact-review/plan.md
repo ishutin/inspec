@@ -180,7 +180,7 @@ builds on: D7
 - [x] S35
 - [x] S36
 - [x] S37
-- [ ] S38
+- [x] S38
 - [ ] S39
 Notes: the six defects of the S27 QA run (scratchpad screenshots 10, 11, 12, 13, 20): a round published only
 after `open` accepts it (a `published` round in the state, set by `open`; the doc route serves the last
@@ -197,3 +197,4 @@ Log:
 - S35: the display entry gains `group` (text or null, required: open names an entry without it, so entries written before D8 are asked for again); the topic list shows the entry's `group` above each group (the source's group only marks where one starts; no label when the entry's is null); SKILL.md's brief asks for `group` in `<lang>` (nine fields); test displays carry `group`; test seen red on the source's English labels
 - S36: app.css: diagram text and code break anywhere (`overflow-wrap:anywhere`), flow steps and their boxes may shrink (`min-width:0`; the live run's overlap was a step's long code wider than its box), the matrix label column and the states' from/to columns are `fit-content(30%)` (a long label had squeezed the cell columns to 24 px), matrix tags and states wrap, compare and the narrow matrix use `minmax(0,1fr)`; test seen red on the flow at 1280 (steps past the card's edge)
 - S37: `/<token>/` is a page like the review page (same CSP headers, `ui/app.css`, the top bar and its System/Light/Dark switch): a card of one link per document, a grid row (subgrid) whose cells are slug, kind, "round N" and the status as a pill; the theme code moved from app.js to `ui/theme.js`, shared with the new `ui/list.js`, so a choice made on either page holds on the other; test seen red on the unstyled list's colours
+- S38: diff.js sets a space (`span.ds`) before and after a run of deleted words wherever the neighbouring text has none ("url и," now reads "url и ,", the QA's "urlи,"), and the quote highlight skips those spaces like the deleted words; a matrix cell with a `tone` gets class `t-<tone>` and its background (`--ok-bg`, new tokens `--chg-bg` and `--new-bg`, `--warn-bg`, in light and dark), tag or not; ui.spec S13 moved: it asserted the glued "othernew", now "other new"; test seen red on the glued "epsilonzeta" and on one background for every tone

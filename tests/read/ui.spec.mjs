@@ -959,7 +959,8 @@ test('S13 a changed block shows summary, body and check as a word diff against i
   await topic(page, 'S2').click();
   await expect(c.locator('.tldr del')).toHaveText(['other']);
   await expect(c.locator('.tldr ins')).toHaveText(['new']);
-  await expect(c.locator('.tldr')).toHaveText('The row says two othernew words today.');
+  // The deleted word keeps a space on each side (S38).
+  await expect(c.locator('.tldr')).toHaveText('The row says two other new words today.');
   await expect(c.locator('.body del')).toHaveText(['other', 'other']);
   // Title and diagram show the new version only.
   await expect(c.locator('h2')).toHaveText('S2 · Title two new words');

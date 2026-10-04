@@ -94,7 +94,7 @@ export function diffInto(el, oldHtml) {
       if (e.del) {
         r.setStart(node, Math.min(e.at, node.data.length));
         r.collapse(true);
-        r.insertNode(mark('del', e.del));
+        r.insertNode(spaced(el, r, mark('del', e.del)));
       } else {
         r.setStart(node, e.at);
         r.setEnd(node, e.end);
@@ -104,8 +104,26 @@ export function diffInto(el, oldHtml) {
   }
 }
 
-function mark(tag, text) {
+// The deleted words with a space on each side where their neighbours have none (S38): "url и," reads "url и ,",
+// never "urlи,". The spaces are spans of class `ds`, which the quote highlight skips like the deleted words.
+function spaced(el, at, del) {
+  const before = document.createRange();
+  before.setStart(el, 0);
+  before.setEnd(at.startContainer, at.startOffset);
+  const after = document.createRange();
+  after.setStart(at.startContainer, at.startOffset);
+  after.setEnd(el, el.childNodes.length);
+  const space = () => mark('span', ' ', 'ds');
+  const f = document.createDocumentFragment();
+  if (/\S$/.test(before.toString())) f.append(space());
+  f.append(del);
+  if (/^\S/.test(after.toString())) f.append(space());
+  return f;
+}
+
+function mark(tag, text, cls) {
   const m = document.createElement(tag);
+  if (cls) m.className = cls;
   m.textContent = text;
   return m;
 }
