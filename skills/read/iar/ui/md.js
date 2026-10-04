@@ -6,6 +6,9 @@ export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ESC[c]);
 
 const CODE_SPAN = /(`+)([\s\S]*?[^`])\1(?!`)/g;
 const LINK = /\[([^\]\n]+)\]\((https?:\/\/[^\s()<>"']+)\)/g;
+// A link to a local file or anchor (`[intent.md](intent.md)`) has no page to open here: its label shows as
+// text, with the target on hover. A link with any other scheme stays as written, inert.
+const LOCAL_LINK = /\[([^\]\n]+)\]\((?![a-z][a-z0-9+.-]*:)([^\s()<>"']+)\)/gi;
 
 function emphasis(s) {
   return s
@@ -23,6 +26,7 @@ export function inline(src) {
   s = s.replace(CODE_SPAN, (_, _ticks, code) => hold(`<code>${esc(code.length > 2 && code.startsWith(' ') && code.endsWith(' ') ? code.slice(1, -1) : code)}</code>`));
   s = esc(s);
   s = s.replace(LINK, (_, label, url) => hold(`<a href="${url}" target="_blank" rel="noopener noreferrer">${emphasis(label)}</a>`));
+  s = s.replace(LOCAL_LINK, (_, label, target) => hold(`<span class="local-link" title="${target}">${emphasis(label)}</span>`));
   s = emphasis(s);
   while (s.includes('\u0000')) s = s.replace(/\u0000(\d+)\u0000/g, (_, i) => held[i]);
   return s;

@@ -142,7 +142,8 @@ Fixes from the live run:
 - **S35** Topic-list group labels are in the display language: a block's display entry carries `group` (the
   translated label of its group, or null), and the page shows that label, never the source's. — check: `npx playwright test tests/read/qa-fixes.spec.mjs`
 - **S36** At 1280×800 and 520×800, no diagram (the four types, with long `code` spans) is wider than its card,
-  and no step of a flow overlaps another. — check: `npx playwright test tests/read/qa-fixes.spec.mjs`
+  and no step of a flow overlaps another. A flow wider than the card scrolls horizontally inside it, and at full
+  width a code span in a flow step is never broken across lines; the check and covers line scrolls the same way. — check: `npx playwright test tests/read/qa-fixes.spec.mjs`
 - **S37** The document list at `/<token>/` uses the page's tokens and theme (system, light, dark), shows slug
   and kind as separate cells, and links each document. — check: `npx playwright test tests/read/qa-fixes.spec.mjs`
 - **S38** In a word diff, a deleted word keeps a space on each side of its neighbours, and a matrix cell's
@@ -158,6 +159,8 @@ After release:
   `{"written":[ids],"refused":[{id, reason}]}`; an entry that breaks its schema or names no block of the round is
   refused and not written, and `put` then exits 2; a file that is not a JSON object exits 2 and writes nothing.
   — check: `node --test --test-timeout=30000 tests/read/put.test.mjs`
+- **S42** A link to a local file or anchor (`[intent.md](intent.md)`) shows its label as text, with the target on
+  hover, never as raw markdown; a link with another scheme stays inert text (S22). — check: `npx playwright test tests/read/qa-fixes.spec.mjs`
 - **S41** brief, spec and plan ask "Agree as is, edit in chat, or open the review with /inspec:read." in plain
   text as the last line of the reply, not with a question tool. — check: `grep -qF 'not with a question tool' skills/brief/SKILL.md && grep -qF 'not with a question tool' skills/spec/SKILL.md && grep -qF 'not with a question tool' skills/plan/SKILL.md`
 

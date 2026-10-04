@@ -209,11 +209,12 @@ Log:
 - S39: check now red on d7 (exit 1) and green on d8 (exit 0)
 - done
 
-## D9 — One write for the displays; the offer in plain text
+## D9 — One write for the displays; the offer in plain text; scroll and local links
 status: done
 builds on: D8
 - [x] S40
 - [x] S41
+- [x] S42
 Notes: from the first real use (Windows): the display subagent wrote one file per block, a turn each, so a
 13-block spec took 4 minutes. `put` stores a whole batch from one file; SKILL.md's brief asks for one write and
 one `put`. The offer is asked in plain text, not with AskUserQuestion. ~45 source lines.
@@ -221,5 +222,8 @@ Log:
 - started from 88e3fea (main after 0.3.0); S40 red (put.test 0/3: usage error), S41 red (phrase missing)
 - S40: `put` in state.mjs and iar.mjs, validation shared with `open`; SKILL.md: one batch file, one write, `put`, refused entries fixed in a new batch
 - S41: brief, spec, plan ask the offer in plain text, the S25 sentence kept on one line
-- verify: put.test 3/3, S25 and S41 greps green, `npm test` green
+- S36 reworded with the operator: a wide flow scrolls inside its card instead of squeezing its steps (code spans no
+  longer broken mid-word), and the check/covers line scrolls the same way; test updated, red on the old CSS
+- S42: a local-file or anchor link (`[intent.md](intent.md)`) shows its label with the target on hover; red before
+- verify: put.test 3/3, S25 and S41 greps green, `npm test` green (node 25/25, Playwright 22/22)
 - done
