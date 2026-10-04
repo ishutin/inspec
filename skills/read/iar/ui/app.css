@@ -134,7 +134,7 @@ ins{background:var(--ins);text-decoration:none}
 .cmp .after{box-shadow:inset 2px 0 0 var(--ok)}
 @media (max-width:760px){.flow{flex-direction:column}.flow li{flex-direction:column}.flow li+li::before{content:"↓";align-self:flex-start;padding:4px 14px}.flow .n{max-width:none}.cmp{grid-template-columns:1fr}.stt{grid-template-columns:auto auto auto;}.stt .on{grid-column:1/-1;margin:-2px 0 6px}}
 .lead-q{color:var(--muted);font-size:12.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;margin:18px 0 4px}
-@media (max-width:760px){.mx{grid-template-columns:1fr!important}.mx .h{display:none}.mx .r{padding:10px 0 0}}
+@media (max-width:760px){.mx{grid-template-columns:minmax(0,1fr)!important}.mx .h{display:none}.mx .r{padding:10px 0 0}}
 .meta{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:12px;font-size:12.5px;color:var(--muted)}
 .meta code{font-size:12px;background:none;padding:0;color:var(--muted)}.meta b{color:var(--ink-2);font-weight:600;margin-right:4px;cursor:help}
 
@@ -186,3 +186,12 @@ mark.cm.old{background:none;border-bottom-style:dashed}
 .changes q{color:var(--ink-2);quotes:"«" "»"}
 .changes .reply{flex-basis:100%;color:var(--muted);font-size:13.5px;padding-left:12px;border-left:2px solid var(--line)}
 .changes p{margin:0;color:var(--muted)}
+/* diagrams never outgrow the card (S36): long code breaks anywhere, every track and step may shrink */
+.dia{min-width:0;max-width:100%;overflow-wrap:anywhere}
+.dia code{overflow-wrap:anywhere;word-break:break-word}
+.flow li,.flow .n{min-width:0}
+.mx{grid-template-columns:fit-content(30%) repeat(var(--cols,2),minmax(0,1fr))}
+.stt{grid-template-columns:fit-content(30%) auto fit-content(30%) minmax(0,1fr)}
+.stt .s,.mx .st{white-space:normal;max-width:100%}
+.cmp{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+@media (max-width:760px){.stt{grid-template-columns:fit-content(45%) auto fit-content(45%)}.cmp{grid-template-columns:minmax(0,1fr)}}
