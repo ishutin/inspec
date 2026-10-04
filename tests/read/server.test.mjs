@@ -184,3 +184,78 @@ test('S9 submit with pending blocks gets 409; a bad review update gets 400 and c
   }
   assert.equal(fs.readFileSync(docPath(repo, 'plan'), 'utf8').length > 0, true);
 });
+
+// open must refuse before it starts anything: no server.json, nothing listening, no opener run.
+async function refused(t, repo, ids) {
+  const bin = fs.mkdtempSync(path.join(os.tmpdir(), 'iar-bin-'));
+  t.after(() => fs.rmSync(bin, { recursive: true, force: true }));
+  const log = path.join(bin, 'opened.log');
+  for (const name of ['open', 'xdg-open']) {
+    fs.writeFileSync(path.join(bin, name), `#!/bin/sh\necho "${name} $*" >> "${log}"\n`, { mode: 0o755 });
+  }
+  const t0 = Date.now();
+  const r = iar(['open', '--id', 'demo/spec'], { cwd: repo, env: { ...process.env, PATH: `${bin}${path.delimiter}${process.env.PATH}` } });
+  const ms = Date.now() - t0;
+  assert.equal(r.code, 2, r.out + r.err);
+  assert.ok(ms < 2000, `open took ${ms} ms`);
+  assert.equal(r.out, '', 'no url printed');
+  const named = new Set(r.err.match(/\b[A-Za-z][\w/-]*\b/g));
+  for (const id of ids) assert.ok(named.has(id), `${id} named in: ${r.err}`);
+  for (const id of ['S1', 'S2', 'overview'].filter((x) => !ids.includes(x))) assert.ok(!named.has(id), `${id} not named in: ${r.err}`);
+  await sleep(300);
+  assert.equal(fs.existsSync(log), false, 'no opener run');
+  assert.equal(fs.existsSync(path.join(stateRoot(repo), 'server.json')), false, 'no server started');
+}
+
+function editDisplay(repo, id, fn) {
+  const dir = stateDir(repo, 'spec');
+  const s = readJSON(path.join(dir, 'blocks.json'));
+  const b = s.blocks.find((x) => x.id === id);
+  const file = path.join(dir, 'display', `${b.hash}.${s.lang}.json`);
+  const d = readJSON(file);
+  fn(d);
+  fs.writeFileSync(file, JSON.stringify(d));
+  return file;
+}
+
+test('S5 open refuses missing and schema-breaking display entries, naming every one', async (t) => {
+  const repo = mkRepo();
+  t.after(() => {
+    iar(['stop'], { cwd: repo });
+    fs.rmSync(repo, { recursive: true, force: true });
+  });
+  const blocks = prepare(repo, 'spec');
+  writeDisplays(blocks.filter((b) => !['S3', 'S4'].includes(b.id)));
+  await refused(t, repo, ['S3', 'S4']);
+  writeDisplays(blocks.filter((b) => ['S3', 'S4'].includes(b.id)));
+
+  const good = {
+    flow: { type: 'flow', steps: [{ label: 'a', text: 'b', actor: 'you' }, { label: 'c', text: 'd' }], loop: 'again' },
+    matrix: { type: 'matrix', caption: 'c', cols: ['x', 'y'], rows: [{ label: 'r', cells: [{ text: '1', tag: 't', tone: 'ok' }, { text: '2' }] }] },
+    states: { type: 'states', transitions: [{ from: 'a', to: 'b', on: 'go' }], note: 'n' },
+    compare: { type: 'compare', before: { label: 'old', text: 'x' }, after: { label: 'new', text: 'y' } },
+  };
+  editDisplay(repo, 'S6', (d) => (d.diagram = good.flow));
+  editDisplay(repo, 'S7', (d) => (d.diagram = good.matrix));
+  editDisplay(repo, 'S8', (d) => (d.diagram = good.states));
+  editDisplay(repo, 'S9', (d) => ((d.diagram = good.compare), (d.covers = [{ id: 'O1', text: 'x' }]), (d.check = 'run `x`'), (d.flag = 'chosen')));
+
+  const bad = {
+    S1: (d) => delete d.tldr,
+    S2: (d) => delete d.covers,
+    S3: (d) => (d.diagram = { type: 'pie', slices: [] }),
+    S4: (d) => (d.diagram = { ...good.matrix, rows: [{ label: 'r', cells: [{ text: '1' }] }] }),
+    S10: (d) => (d.diagram = { ...good.matrix, rows: [...good.matrix.rows, { label: 's', cells: [{ text: '1' }, { text: '2' }, { text: '3' }] }] }),
+    S11: (d) => (d.diagram = { type: 'flow' }),
+    overview: (d) => (d.title = 42),
+  };
+  for (const [id, fn] of Object.entries(bad)) editDisplay(repo, id, fn);
+  const s12 = editDisplay(repo, 'S12', () => {});
+  fs.writeFileSync(s12, '{not json');
+  await refused(t, repo, [...Object.keys(bad), 'S12']);
+
+  for (const id of [...Object.keys(bad), 'S12']) writeDisplays(blocks.filter((b) => b.id === id));
+  const r = iar(['open', '--id', 'demo/spec', '--no-open'], { cwd: repo });
+  assert.equal(r.code, 0, r.err);
+  assert.match(r.out, /^inspec-read: http:\/\/127\.0\.0\.1:\d+\/[0-9a-f]{32}\/demo\/spec$/m);
+});

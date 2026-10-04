@@ -95,9 +95,65 @@ export function load(dir) {
   return { ...blocks, review, result: readJSON(path.join(dir, 'result.json')) };
 }
 
-export function missingDisplays(dir) {
+// Display schema (spec: Architecture › State). Returns the first problem of an entry, or null.
+const str = (v) => typeof v === 'string';
+const strOrNull = (v) => v === null || str(v);
+const obj = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
+const list = (v, ok) => Array.isArray(v) && v.length > 0 && v.every((x) => obj(x) && ok(x));
+const TONES = ['ok', 'changed', 'new', 'warn'];
+const DIAGRAMS = {
+  flow: (d) => {
+    if (!list(d.steps, (x) => str(x.label) && str(x.text) && (x.actor === undefined || x.actor === 'you'))) return 'flow needs steps of {label, text, actor?: "you"}';
+    return d.loop === undefined || d.loop === null || str(d.loop) || 'flow loop must be text';
+  },
+  matrix: (d) => {
+    if (!Array.isArray(d.cols) || !d.cols.length || !d.cols.every(str)) return 'matrix needs cols as a list of text';
+    if (!list(d.rows, (r) => str(r.label) && Array.isArray(r.cells))) return 'matrix needs rows of {label, cells}';
+    const row = d.rows.find((r) => r.cells.length !== d.cols.length);
+    if (row) return `matrix row "${row.label}" has ${row.cells.length} cells for ${d.cols.length} columns`;
+    const cell = (c) => obj(c) && str(c.text) && (c.tag === undefined || str(c.tag)) && (c.tone === undefined || TONES.includes(c.tone));
+    return d.rows.every((r) => r.cells.every(cell)) || 'matrix cells must be {text, tag?, tone?: ok|changed|new|warn}';
+  },
+  states: (d) => list(d.transitions, (x) => str(x.from) && str(x.to) && str(x.on)) || 'states needs transitions of {from, to, on}',
+  compare: (d) => [d.before, d.after].every((x) => obj(x) && str(x.label) && str(x.text)) || 'compare needs before and after as {label, text}',
+};
+
+export function displayProblem(d) {
+  if (!obj(d)) return 'not a JSON object';
+  for (const f of ['section', 'title', 'tldr', 'body', 'check', 'flag', 'covers', 'diagram']) if (!(f in d)) return `missing field "${f}"`;
+  for (const f of ['section', 'title', 'tldr', 'body']) if (!str(d[f])) return `"${f}" must be text`;
+  for (const f of ['check', 'flag']) if (!strOrNull(d[f])) return `"${f}" must be text or null`;
+  if (!Array.isArray(d.covers) || !d.covers.every((c) => obj(c) && str(c.id) && str(c.text))) return '"covers" must be a list of {id, text}';
+  const g = d.diagram;
+  if (g === null) return null;
+  if (!obj(g)) return '"diagram" must be null or an object';
+  if (!Object.hasOwn(DIAGRAMS, g.type)) return `unknown diagram type ${JSON.stringify(g.type ?? null)}`;
+  for (const f of ['caption', 'note']) if (g[f] !== undefined && g[f] !== null && !str(g[f])) return `diagram ${f} must be text`;
+  const ok = DIAGRAMS[g.type](g);
+  return ok === true ? null : ok;
+}
+
+// [{id, reason}] for each block whose display entry is missing or breaks the schema.
+export function badDisplays(dir) {
   const s = load(dir);
-  return s.blocks.filter((b) => !fs.existsSync(displayPath(dir, b.hash, s.lang))).map((b) => b.id);
+  const out = [];
+  for (const b of s.blocks) {
+    const file = displayPath(dir, b.hash, s.lang);
+    if (!fs.existsSync(file)) {
+      out.push({ id: b.id, reason: `no display entry (${file})` });
+      continue;
+    }
+    let d;
+    try {
+      d = JSON.parse(fs.readFileSync(file, 'utf8'));
+    } catch (e) {
+      out.push({ id: b.id, reason: `not valid JSON: ${e.message}` });
+      continue;
+    }
+    const why = displayProblem(d);
+    if (why) out.push({ id: b.id, reason: why });
+  }
+  return out;
 }
 
 // The page's whole review for this round. Throws a message string for a 400.
