@@ -169,3 +169,9 @@ mark.cm.old{background:none;border-bottom-style:dashed}
 .modal>div{background:var(--panel);border-radius:14px;max-width:420px;width:100%;padding:20px;max-height:85vh;overflow:auto}
 .modal .q{margin:0;font-size:15px;color:var(--ink)}
 .pop.sel{padding:4px}.pop.sel .btn{font-size:13px}
+@media (max-width:760px){
+  .F{grid-template-columns:minmax(0,1fr)}
+  .F .toc .tg2{display:none}
+  .F .toc a .tt{overflow:visible}
+  .card{overflow-wrap:anywhere}
+}

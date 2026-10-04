@@ -89,7 +89,7 @@ status: todo
 builds on: D3
 - [x] S16
 - [x] S19
-- [ ] S20
+- [x] S20
 - [x] S23
 Notes: selection → Comment with the three kinds, quote highlight, the delete-and-approve confirm; the
 System/Light/Dark switch with storage wrapped in try/catch; the ≤ 760 px topic row; the flow, matrix, states and
@@ -100,6 +100,7 @@ Log:
 - S16: selecting text inside one `[data-sel]` field of the card (tldr, flag, body, check; mouse or Shift+arrows) shows a "Comment" button that opens the comment box with the quote; save stores {quote, kind, text}, marks the block "Has comments", and `mark.cm` highlights the quote (matched with whitespace collapsed, across bold and code; earlier rounds' quotes dashed); approve on a block with this round's comments opens an in-page dialog "Delete N comments and approve?" ("comment" when N is 1, as D3's submit wording) with Yes/No (Enter = focused button, Escape and backdrop = No), replacing D3's `window.confirm`; Yes keeps earlier rounds' comments and replies; S10's test now also keeps a selection comment across reload, stop/open and prepare; test seen red on the missing Comment button
 - S23: `diagram()` draws flow (steps, `you` dashed, loop), matrix (label column plus one per column, tags with tones), states (from → to, on) and compare (before/after) as in the mockup, inside `figure.dia[data-content]` between body and meta; every diagram text goes through a new md.js `code()` (backtick spans as code, everything else escaped) instead of `inline()`, because the row and State say all other markup stays text (inline would make **bold** and links elements); the matrix column count reaches CSS as `--cols` set from script, since the CSP forbids inline style attributes; at ≤ 760 px the mockup's CSS stacks the flow and shows the matrix in one column; test seen red on the missing figure, checks every text, code spans, no live tags, and the wide and 760/375 px geometry with no horizontal scroll
 - S19: the theme switch came with D3 (System/Light/Dark, `iar.theme` in try/catch storage); the new test was green on it at once, so it was seen red against two mutations instead (storage read without try/catch: the page does not render; the choice not stored: Light lost on reload); it checks System following `prefers-color-scheme`, Light and Dark overriding it and surviving a reload, body background and text colour differing, and a context whose `localStorage` throws rendering in System with no page error
+- S20: test seen red on the row's height (122 px: the topic list's group labels from D3 wrapped inside the row); at ≤ 760 px app.css now hides the group labels like the section names, makes the grid column `minmax(0,1fr)` so long content cannot widen the page, and lets card text break anywhere; the test, at 760 and 375 px on the 42-block spec with long unbreakable paths in tldr, body and a table, checks one row ≤ 56 px that scrolls, the focused topic in the viewport after moving by keyboard, by click at the row's end and back, and no horizontal page scroll
 
 ## D5 — The next round
 status: todo

@@ -734,3 +734,50 @@ test('S19 theme: System follows the scheme, Light and Dark override it and survi
   expect(errors).toEqual([]);
   await ctx.close();
 });
+
+test('S20 at 760 px or less the topic list is one scrolling row, the focused topic is in view, no horizontal scroll', async ({ page }) => {
+  const long = 'skills/read/iar/lib/a-very-long-path-without-any-break/that-keeps-going/and-going/until-it-is-wider-than-a-phone.mjs';
+  const d = setup('spec', (b) => ({ ...en(b), title: `${en(b).title} with a longer name`, tldr: `Uses \`${long}\` here.`, body: `See ${long} and \`${long}\`.\n\n| A | B |\n|---|---|\n| \`${long}\` | ${long} |` }));
+  for (const width of [760, 375]) {
+    await page.setViewportSize({ width, height: 800 });
+    await page.goto(d.url);
+    await expect(card(page).locator('h2')).toContainText('Name of overview');
+    const layout = () =>
+      page.evaluate(() => {
+        const toc = document.querySelector('.F .toc');
+        const r = toc.getBoundingClientRect();
+        const tops = [...toc.querySelectorAll('a.topic')].map((a) => Math.round(a.getBoundingClientRect().top));
+        const c = toc.querySelector('a.cur').getBoundingClientRect();
+        const de = document.documentElement;
+        return {
+          height: r.height,
+          rows: new Set(tops).size,
+          scrolls: toc.scrollWidth > toc.clientWidth && ['auto', 'scroll'].includes(getComputedStyle(toc).overflowX),
+          inView: c.left >= 0 && c.right <= de.clientWidth && c.top >= 0 && c.bottom <= innerHeight,
+          pageWide: de.scrollWidth > de.clientWidth,
+        };
+      });
+    const holds = async (what) => {
+      const l = await layout();
+      expect(l.height, `${what} at ${width}`).toBeLessThanOrEqual(56);
+      expect(l.rows, `${what} at ${width}`).toBe(1);
+      expect(l.scrolls, `${what} at ${width}`).toBe(true);
+      expect(l.inView, `${what} at ${width}`).toBe(true);
+      expect(l.pageWide, `${what} at ${width}`).toBe(false);
+    };
+    await holds('first block');
+    // Far along by keyboard, then by a click at the row's end, then back to the start.
+    for (let i = 0; i < 25; i++) await page.keyboard.press('ArrowDown');
+    await expect(card(page).locator('.tag')).toContainText('26 of 42');
+    await holds('block 26');
+    await page.locator('.F .toc').evaluate((t) => (t.scrollLeft = t.scrollWidth));
+    await topic(page, 'open').click();
+    await expect(card(page).locator('.tag')).toContainText('42 of 42');
+    await holds('last block');
+    await card(page).getByRole('button', { name: 'Show source' }).click();
+    await holds('source shown');
+    for (let i = 0; i < 41; i++) await page.keyboard.press('k');
+    await expect(card(page).locator('.tag')).toContainText('1 of 42');
+    await holds('back at the first');
+  }
+});
