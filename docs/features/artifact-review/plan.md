@@ -40,7 +40,7 @@ Log:
 Unblocked (was Blocked): S1 is a spec defect. Its intent list stops at O12, but the intent.md the fixture must copy "as committed" has O13 (added in 7a0ad18, before "spec agreed" ecb5e82); the split rules give `O13` between `O12` and `headline-scenario`, so the row cannot hold without changing what it says. Tried: parse.mjs matches the Split rules (plan and spec lists hold, spec.ids 42 ids); a stale intent copy would satisfy the list but not "as committed". To unblock: through /inspec:spec, add O13 to S1's intent list (and fix "outcomes O1–O12" in the spec's opening and "41 blocks" in States to 42), then copy the new spec.md into tests/read/fixtures/ (its ids stay the same), update the list in tests/read/prepare.test.mjs and check S1. Everything else in D1 holds. — answered: spec fixed through /inspec:spec in 75e08f2 (S1 lists O13, O1–O13, 42 blocks).
 
 ## D2 — Guards, drop and many documents
-status: todo
+status: done
 builds on: D1
 - [x] S5
 - [x] S11
@@ -54,6 +54,8 @@ Log:
 - S11: `drop` in iar.mjs and state.mjs; prepare also writes `start.json` (the round as prepare starts it, before the page's edits; not in State's file list, added because a prepare rerun keeps in-round edits, S10, so review.json cannot serve as the start) and drop writes it back as review.json; a sent round is left as is; test seen red on drop's exit code (no such command)
 - S28: `GET /<token>/` (and `/<token>`) lists every prepared document under the state root as links with slug, kind, `round N` and a status (`in review`, `approved`, `changes requested`, from result.json of the current round; the words are this build's choice, the spec names none); any request restarts the idle timer, `IDLE_MS` = 8 h, overridden by `INSPEC_READ_IDLE_MS` for the test; two documents and a second slug share one server.json; tests seen red on the list's 404, the server staying up and the missing `IDLE_MS`
 - addition outside the rows, at the operator's request (security review: server.json's token and the state files were readable by other local users): state.mjs `ensureRoot` creates `inspec-read/` 0700 and chmods an existing one, called by prepare, open and the server; `writeJSON` writes every state file 0600 through its tmp file and rename, and server.mjs writes server.json through it; server.log opens 0600; node test asserts the modes on POSIX (skipped on win32), seen red on the root's 0755
+- verify: prepare.test 7/7 (S1–S4), server.test 12/12 (S5–S9, S11, S28, modes), `npm test` 19/19, all bare; no lint or type commands in the repository; no server left running; diff read against States (schema-breaking entry, 8 hours without requests, two documents at once, answering in chat via drop)
+- done
 
 ## D3 — Review page: read, approve, submit
 status: todo
