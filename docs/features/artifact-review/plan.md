@@ -172,3 +172,19 @@ Log:
 - S33: skills/read/SKILL.md: prepare's printed list may end with the summary entry (`display/summary.<hash>.<lang>.json`, `doc`), passed to the subagent with the blocks; the brief asks for `{tldr, body, diagram}` from the whole document by the display rules (at most 200 words, nothing added); a `"block":"summary"` feedback entry is a remark on the whole document; check green (was exit 1)
 - verify: summary.test 2/2 (S29), summary.spec 3/3 (S30–S32), S33 grep exit 0, prepare.test 7/7 (S1–S4), server.test 12/12 (S5–S9, S11, S28, modes), ui.spec 14/14 (S10–S23), S25 and S26 greps exit 0, `npm test` green (node 21/21, playwright 17/17), all bare; no lint or type commands in the repository; no server left running; screenshots of a round-2 summary (diagram, a quote highlight, "Changed since round 1" with a changed block and an answer, a summary comment with its reply) in light and dark at 1280×800 and at 520 px read in the card's type, spacing and tokens; whole diff read against States and the rows: summary missing or breaking its schema, every block edit renewing its hash, another language, comments by selection and whole, sent and offline (Start review still navigates, Comment disabled), round N+1 carry, replies, drop, prepare rerun in the round, a review with only summary comments (changes_requested), state prepared before D7 (open asks for a new prepare)
 - done
+
+## D8 — Fixes from the live run
+status: todo
+builds on: D7
+- [ ] S34
+- [ ] S35
+- [ ] S36
+- [ ] S37
+- [ ] S38
+- [ ] S39
+Notes: the six defects of the S27 QA run (scratchpad screenshots 10, 11, 12, 13, 20): a round published only
+after `open` accepts it (a `published` round in the state, set by `open`; the doc route serves the last
+published one), a translated `group` in the display entry and in SKILL.md's brief, diagram widths and the flow
+overlap, the styled document list, the diff spacing and matrix `tone`, and the summary-comment handling in
+SKILL.md. Also make D1's S6 opener test wait for the recording opener instead of racing it. New test files
+`tests/read/qa-fixes.test.mjs` and `tests/read/qa-fixes.spec.mjs`. ~150 source lines.

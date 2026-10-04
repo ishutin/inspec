@@ -134,6 +134,23 @@ Document summary:
 - **S33** `skills/read/SKILL.md`'s subagent brief asks for the summary entry, written by the display rules from
   the whole document. — check: `grep -qF 'display/summary' skills/read/SKILL.md`
 
+Fixes from the live run:
+
+- **S34** An open tab switches to round N+1 only once `open` has accepted that round's display entries: after
+  `prepare` and before a successful `open`, the doc route still serves round N as submitted, and the page keeps
+  showing "sent, waiting for the session". — check: `node --test --test-timeout=30000 tests/read/qa-fixes.test.mjs`
+- **S35** Topic-list group labels are in the display language: a block's display entry carries `group` (the
+  translated label of its group, or null), and the page shows that label, never the source's. — check: `npx playwright test tests/read/qa-fixes.spec.mjs`
+- **S36** At 1280×800 and 520×800, no diagram (the four types, with long `code` spans) is wider than its card,
+  and no step of a flow overlaps another. — check: `npx playwright test tests/read/qa-fixes.spec.mjs`
+- **S37** The document list at `/<token>/` uses the page's tokens and theme (system, light, dark), shows slug
+  and kind as separate cells, and links each document. — check: `npx playwright test tests/read/qa-fixes.spec.mjs`
+- **S38** In a word diff, a deleted word keeps a space on each side of its neighbours, and a matrix cell's
+  `tone` colours the cell whether or not it has a `tag`. — check: `npx playwright test tests/read/qa-fixes.spec.mjs`
+- **S39** `skills/read/SKILL.md` says a comment on the summary is a remark on the document as a whole: the
+  session acts on it by editing the document through its owning skill or answers it in `replies.json`; it is
+  never sent to the display subagent as a request to reword the summary. — check: `grep -qF 'remark on the document as a whole' skills/read/SKILL.md`
+
 Skills and docs:
 
 - **S25** The sentence "Agree as is, edit in chat, or open the review with /inspec:read." is in
@@ -173,9 +190,10 @@ Outside the tree, per document: `$(git rev-parse --git-common-dir)/inspec-read/<
 so every worktree of the repository shares one server and one state):
 - `blocks.json`: `{doc, kind, lang, round, blocks:[{id, section, group, source, hash}]}`.
 - `display/<hash>.<lang>.json`: written by the session.
-  `{section, title, tldr, body, check, flag, covers, diagram}`:
+  `{section, group, title, tldr, body, check, flag, covers, diagram}`:
   - `section`: the `##` heading in `lang`.
   - `title`: the block's id token, then ` · ` and a short name in `lang`; without a token, the name alone.
+  - `group`: the label of the block's group (S35) in `lang`, or `null` when the block has none.
   - `tldr`: one sentence. Literal syntax (markdown, paths with `<…>`) goes in a code span.
   - `body`: markdown in `lang`. It is the source rewritten for a technical person to read easily, not
     simplified. Every fact, number, name, condition, command and path stays, and nothing is added. The id
