@@ -297,3 +297,79 @@ test('S11 drop discards the round\'s unsent statuses and comments, leaving it as
 
   assert.equal(iar(['drop', '--id', 'demo/intent'], { cwd: repo }).code, 2, 'nothing prepared');
 });
+
+test('S28 one server serves several documents, and /<token>/ lists them', async (t) => {
+  const repo = setup(t, 'plan');
+  writeDisplays(prepare(repo, 'spec'));
+  const other = iar(['prepare', docPath(repo, 'plan'), '--id', 'other/plan', '--lang', 'en'], { cwd: repo });
+  assert.equal(other.code, 0, other.err);
+  writeDisplays(JSON.parse(other.out));
+
+  const plan = open(repo, 'plan');
+  const spec = open(repo, 'spec');
+  const r = iar(['open', '--id', 'other/plan', '--no-open'], { cwd: repo });
+  assert.equal(r.code, 0, r.err);
+  const pid = readJSON(path.join(stateRoot(repo), 'server.json')).pid;
+  assert.equal(spec.url, plan.url.replace(/plan$/, 'spec'), 'same server.json: same port and token');
+  assert.match(r.out, new RegExp(`inspec-read: ${plan.url.replace('/demo/plan', '/other/plan')}$`, 'm'));
+
+  for (const [u, kind, n] of [[plan, 'plan', 2], [spec, 'spec', 42]]) {
+    assert.equal((await fetch(u.url)).status, 200);
+    const d = await (await fetch(`${u.api}/doc`)).json();
+    assert.equal(d.kind, kind);
+    assert.equal(d.blocks.length, n);
+  }
+
+  // demo/plan sent and approved, other/plan in round 2 after a sent round 1, demo/spec in review.
+  await review(plan.api, { D1: { status: 'ok' }, D2: { status: 'ok' } });
+  assert.equal((await submit(plan.api)).status, 200);
+  const oapi = plan.api.replace('/demo/plan', '/other/plan');
+  await review(oapi, { D1: { status: 'ok' }, D2: { status: 'cm', comments: [{ quote: '', kind: 'question', text: '?' }] } });
+  assert.equal((await submit(oapi)).status, 200);
+  assert.equal(iar(['prepare', docPath(repo, 'plan'), '--id', 'other/plan', '--lang', 'en'], { cwd: repo }).code, 0);
+
+  const base = `http://127.0.0.1:${plan.port}/${plan.token}/`;
+  for (const u of [base, base.slice(0, -1)]) {
+    const res = await fetch(u);
+    assert.equal(res.status, 200, u);
+    assert.match(res.headers.get('content-type'), /^text\/html/);
+    const html = await res.text();
+    const links = [...html.matchAll(/<a href="([^"]+)">([\s\S]*?)<\/a>/g)].map((m) => [m[1], m[2].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()]);
+    assert.deepEqual(links.map((l) => l[0]).sort(), [`/${plan.token}/demo/plan`, `/${plan.token}/demo/spec`, `/${plan.token}/other/plan`]);
+    const text = Object.fromEntries(links.map(([h, s]) => [h.split('/').slice(2).join('/'), s]));
+    assert.match(text['demo/plan'], /demo.*plan.*round 1.*approved/);
+    assert.match(text['demo/spec'], /demo.*spec.*round 1.*in review/);
+    assert.match(text['other/plan'], /other.*plan.*round 2.*in review/);
+  }
+  assert.equal((await fetch(`http://127.0.0.1:${plan.port}/`)).status, 404, 'the list needs the token');
+  assert.equal(readJSON(path.join(stateRoot(repo), 'server.json')).pid, pid, 'one server');
+});
+
+test('S28 the server exits after the idle time with no request, and polling keeps it alive', async (t) => {
+  const repo = setup(t);
+  const env = { ...process.env, INSPEC_READ_IDLE_MS: '1500' };
+  const a = open(repo, 'plan', ['--no-open'], env);
+  const { pid } = readJSON(path.join(stateRoot(repo), 'server.json'));
+  const alive = () => {
+    try {
+      process.kill(pid, 0);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+  for (let i = 0; i < 8; i++) {
+    await sleep(500);
+    assert.equal((await fetch(`${a.api}/doc`)).status, 200, `poll ${i}: kept alive`);
+  }
+  assert.ok(alive());
+  for (let i = 0; i < 60 && alive(); i++) await sleep(100);
+  assert.equal(alive(), false, 'exited when idle');
+  assert.equal(await fetch(a.url).then(() => true, () => false), false);
+  assert.equal(open(repo).url, a.url, 'the next open brings back the same url');
+});
+
+test('S28 the default idle time is 8 hours', async () => {
+  const { IDLE_MS } = await import('../../skills/read/iar/lib/server.mjs');
+  assert.equal(IDLE_MS, 8 * 60 * 60 * 1000);
+});

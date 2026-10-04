@@ -1,12 +1,15 @@
 // The repository's review server (spec: Architecture › Server and HTTP).
 // Run as `node server.mjs <inspec-read dir>`; `open` starts it detached.
 import { randomBytes } from 'node:crypto';
+import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { readJSON, writeJSON, docDir, load, displayPath, applyReview, submit, KINDS } from './state.mjs';
 
 export const BASE_PORT = 47100;
+// The server exits after this long with no request (S28); INSPEC_READ_IDLE_MS overrides it for tests.
+export const IDLE_MS = 8 * 60 * 60 * 1000;
 const SLUG = /^[a-z0-9][a-z0-9._-]*$/i;
 
 function send(res, code, body, type = 'application/json; charset=utf-8') {
@@ -51,17 +54,55 @@ function docPayload(dir) {
   };
 }
 
+const esc = (t) => String(t).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+
+// Every prepared document under root: [{slug, kind, round, status}].
+function documents(root) {
+  const out = [];
+  const dirs = (p) => {
+    try {
+      return fs.readdirSync(p, { withFileTypes: true }).filter((e) => e.isDirectory()).map((e) => e.name).sort();
+    } catch {
+      return [];
+    }
+  };
+  for (const slug of dirs(root)) {
+    if (!SLUG.test(slug)) continue;
+    for (const kind of KINDS) {
+      const s = dirs(path.join(root, slug)).includes(kind) ? load(docDir(root, slug, kind)) : null;
+      if (!s) continue;
+      const sent = s.result && s.result.round === s.round ? s.result.result : null;
+      out.push({ slug, kind, round: s.round, status: sent === 'approved' ? 'approved' : sent ? 'changes requested' : 'in review' });
+    }
+  }
+  return out;
+}
+
+const listPage = (root, token) => {
+  const docs = documents(root);
+  const items = docs
+    .map((d) => `<li><a href="/${token}/${esc(d.slug)}/${d.kind}"><b>${esc(d.slug)}</b> ${d.kind} · round ${d.round} · ${d.status}</a></li>`)
+    .join('\n');
+  return `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>inspec-read</title>
+<h1>inspec-read</h1>
+${docs.length ? `<ul>\n${items}\n</ul>` : '<p>No documents prepared.</p>'}
+`;
+};
+
 const placeholder = (slug, kind) =>
   `<!doctype html><meta charset="utf-8"><title>inspec-read</title><p>inspec-read: ${slug}/${kind}</p>\n`;
 
-export function handler(root, token, onStop) {
+export function handler(root, token, onStop, onRequest = () => {}) {
   return async (req, res) => {
+    onRequest();
     try {
       const url = new URL(req.url, 'http://127.0.0.1');
       const parts = url.pathname.split('/').slice(1);
       if (parts[0] !== token) return send(res, 404, { error: 'not found' });
       const rest = parts.slice(1);
       const m = req.method;
+
+      if (rest.length <= 1 && !rest[0] && m === 'GET') return send(res, 200, listPage(root, token), 'text/html; charset=utf-8');
 
       if (rest[0] === 'api' && rest[1] === 'ping' && rest.length === 2 && m === 'GET') return send(res, 200, { pid: process.pid });
       if (rest[0] === 'api' && rest[1] === 'stop' && rest.length === 2 && m === 'POST') {
@@ -127,12 +168,19 @@ export async function serve(root) {
   const saved = readJSON(file) || {};
   const token = /^[0-9a-f]{32}$/.test(saved.token || '') ? saved.token : randomBytes(16).toString('hex');
   let server;
+  let idle;
   const stop = () => {
+    clearTimeout(idle);
     server.close();
     server.closeAllConnections?.();
     setTimeout(() => process.exit(0), 20);
   };
-  server = http.createServer(handler(root, token, stop));
+  const idleMs = Number(process.env.INSPEC_READ_IDLE_MS) > 0 ? Number(process.env.INSPEC_READ_IDLE_MS) : IDLE_MS;
+  const touch = () => {
+    clearTimeout(idle);
+    idle = setTimeout(stop, idleMs);
+  };
+  server = http.createServer(handler(root, token, stop, touch));
   const tries = saved.port ? [saved.port] : [];
   for (let p = BASE_PORT; p < BASE_PORT + 200; p++) if (p !== saved.port) tries.push(p);
   let port = null;
@@ -146,6 +194,7 @@ export async function serve(root) {
   }
   if (port === null) throw new Error(`no free port from ${BASE_PORT}`);
   writeJSON(file, { port, token, pid: process.pid });
+  touch();
   return server;
 }
 
