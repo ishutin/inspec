@@ -1,6 +1,6 @@
 ---
 name: Artifact review (IAR)
-status: todo
+status: done
 ---
 
 # Artifact review (IAR)
@@ -23,7 +23,7 @@ The operator: the one person running an inspec session on their own machine, at 
 
 - **O1 Offered at the right moment.** At the end of brief, spec and plan, the session offers three ways
   on: agree as is, edit in chat, or open the artifact review. The operator can also start the review
-  themselves with a skill at any time for an existing intent, spec or plan.
+  themselves with `/inspec:read` at any time for an existing intent, spec or plan.
 - **O2 Read in short blocks, in their language.** The review opens in the browser as one block at a time
   (a section, a contract row, a delivery), with a short summary first, in the language the operator writes
   in the session. When that is the document's own language, there is no translation. Each block can show its
@@ -50,6 +50,9 @@ The operator: the one person running an inspec session on their own machine, at 
   same round where they left it.
 - **O11 Theme.** The interface follows the system theme, and the operator can force light or dark; the choice
   is remembered.
+- **O12 Waiting.** While the review is open the session waits for it, with no time limit. If the operator
+  writes in the chat instead (agrees, asks for an edit, or drops the review), the session closes the review
+  and acts on what they wrote; anything not yet sent from the review is discarded.
 
 ## Headline scenario
 
@@ -82,9 +85,3 @@ The operator: the one person running an inspec session on their own machine, at 
 - Switching the display language inside the tool.
 - Editing the document's text directly in the tool.
 - Any record of a passed review in the repository: agreeing is the operator's call, as it is today.
-
-## Open
-
-- What the session does while the review is open and nobody sends it: how long it waits, and how the
-  operator abandons it from chat.
-- Slug `artifact-review` and the skill's name (`/inspec:review` is taken by the code review): confirm.
