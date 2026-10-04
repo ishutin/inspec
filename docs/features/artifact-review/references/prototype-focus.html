@@ -1,0 +1,329 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>inspec review</title>
+<style>
+:root{
+  --bg:#f7f7f5;--panel:#fff;--ink:#1d1d1b;--muted:#6b6b66;--line:#e4e3de;--soft:#efeeea;
+  --accent:#3b5bdb;--accent-ink:#fff;--ok:#2b8a3e;--ok-bg:#e6f4ea;--warn:#b35c00;--warn-bg:#fff3e0;
+  --cm:#f2c94c55;--cm-strong:#e0a800;--del:#fde2e1;--ins:#dcf5e3;--code:#f1f0ec;
+  --r:10px;--shadow:0 1px 2px #0000000d,0 4px 16px #0000000a;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#141413;--panel:#1d1d1b;--ink:#ecebe6;--muted:#9a9992;--line:#2f2e2b;--soft:#262523;
+  --accent:#7c94ff;--accent-ink:#0d0d0c;--ok:#5cc777;--ok-bg:#1c3324;--warn:#ffb05c;--warn-bg:#3a2a14;
+  --cm:#e0a80040;--cm-strong:#f2c94c;--del:#4a1f1f;--ins:#1b3d27;--code:#262523;--shadow:none;}}
+:root[data-theme="dark"]{
+  --bg:#141413;--panel:#1d1d1b;--ink:#ecebe6;--muted:#9a9992;--line:#2f2e2b;--soft:#262523;
+  --accent:#7c94ff;--accent-ink:#0d0d0c;--ok:#5cc777;--ok-bg:#1c3324;--warn:#ffb05c;--warn-bg:#3a2a14;
+  --cm:#e0a80040;--cm-strong:#f2c94c;--del:#4a1f1f;--ins:#1b3d27;--code:#262523;--shadow:none;}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-size:15px;line-height:1.55}
+button{font:inherit;color:inherit;cursor:pointer}
+code{background:var(--code);padding:1px 5px;border-radius:4px;font-size:.88em;font-family:ui-monospace,Menlo,monospace}
+mark.cm{background:var(--cm);color:inherit;border-bottom:2px solid var(--cm-strong);border-radius:2px;cursor:pointer}
+del{background:var(--del);text-decoration:line-through;opacity:.85}
+ins{background:var(--ins);text-decoration:none}
+
+/* top bar */
+.top{position:sticky;top:0;z-index:20;background:var(--panel);border-bottom:1px solid var(--line);display:flex;gap:12px;align-items:center;padding:10px 16px;flex-wrap:wrap}
+.brand{font-weight:650;letter-spacing:-.01em}
+.brand small{font-weight:400;color:var(--muted);margin-left:6px}
+.seg{display:inline-flex;background:var(--soft);border-radius:8px;padding:2px}
+.seg button{border:0;background:transparent;padding:4px 10px;border-radius:6px;font-size:13px;color:var(--muted)}
+.seg button.on{background:var(--panel);color:var(--ink);box-shadow:var(--shadow)}
+.spacer{flex:1}
+.progress{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
+.bar{width:140px;height:6px;background:var(--soft);border-radius:3px;overflow:hidden;display:flex}
+.bar i{display:block;height:100%}
+.btn{border:1px solid var(--line);background:var(--panel);padding:6px 12px;border-radius:8px;font-size:14px}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:550}
+.btn.ok{background:var(--ok-bg);border-color:transparent;color:var(--ok);font-weight:550}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.lbl{font-size:12px;color:var(--muted);margin-right:2px}
+
+/* common block bits */
+.tag{display:inline-block;font-size:11px;font-weight:600;letter-spacing:.03em;text-transform:uppercase;color:var(--muted)}
+.st{font-size:12px;padding:2px 8px;border-radius:99px;white-space:nowrap}
+.st.ok{background:var(--ok-bg);color:var(--ok)}
+.st.cm{background:var(--warn-bg);color:var(--warn)}
+.st.new{background:var(--soft);color:var(--muted)}
+.st.chg{background:var(--accent);color:var(--accent-ink)}
+.flag{background:var(--warn-bg);color:var(--warn);border-radius:8px;padding:8px 10px;font-size:13.5px;margin:10px 0}
+.flag b{font-weight:600}
+.tldr{font-size:16px;font-weight:550;margin:4px 0 8px}
+.body p{margin:.5em 0}.body ul{margin:.4em 0;padding-left:1.2em}
+.check{font-size:13px;color:var(--muted);border-left:3px solid var(--line);padding-left:10px;margin-top:10px}
+.src{white-space:pre-wrap;font-family:ui-monospace,Menlo,monospace;font-size:12.5px;background:var(--code);padding:10px;border-radius:8px;margin-top:10px}
+.cmts{margin-top:12px;display:flex;flex-direction:column;gap:6px}
+.cmt{background:var(--soft);border-radius:8px;padding:8px 10px;font-size:13.5px}
+.cmt q{display:block;color:var(--muted);font-size:12.5px;quotes:"«" "»";margin-bottom:2px}
+.cmt .k{font-size:11px;font-weight:600;text-transform:uppercase;color:var(--warn);margin-right:6px}
+.cmt .x{float:right;border:0;background:none;color:var(--muted);font-size:12px}
+.actions{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+.linkish{border:0;background:none;color:var(--muted);font-size:13px;padding:0;text-decoration:underline dotted}
+.carry{font-size:12.5px;color:var(--ok)}
+
+/* layout A: focus */
+.A{max-width:760px;margin:24px auto;padding:0 16px}
+.A .dots{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:14px}
+.A .dots button{width:28px;height:8px;border:0;border-radius:4px;background:var(--soft);padding:0}
+.A .dots button.ok{background:var(--ok)}.A .dots button.cm{background:var(--cm-strong)}.A .dots button.cur{outline:2px solid var(--accent);outline-offset:2px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:22px 24px;box-shadow:var(--shadow)}
+.card .hd{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.card h2{margin:6px 0 2px;font-size:22px;letter-spacing:-.01em}
+.A .nav{display:flex;justify-content:space-between;margin-top:14px;color:var(--muted);font-size:13px}
+.kbd{font-family:ui-monospace,Menlo,monospace;font-size:11px;border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:0 4px}
+
+/* layout B: document */
+.B{display:grid;grid-template-columns:220px minmax(0,1fr) 300px;gap:0;min-height:calc(100vh - 54px)}
+.B .toc{border-right:1px solid var(--line);padding:16px 10px;position:sticky;top:54px;height:calc(100vh - 54px);overflow:auto}
+.B .toc a{display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:6px;color:var(--ink);text-decoration:none;font-size:13.5px}
+.B .toc a:hover{background:var(--soft)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--line);flex:none}
+.dot.ok{background:var(--ok)}.dot.cm{background:var(--cm-strong)}.dot.chg{background:var(--accent)}
+.B .doc{padding:20px 28px 80px;max-width:780px}
+.B .blk{position:relative;padding:14px 16px 14px 18px;border-radius:10px;margin-bottom:10px;border:1px solid transparent}
+.B .blk:hover{border-color:var(--line);background:var(--panel)}
+.B .blk::before{content:"";position:absolute;left:0;top:12px;bottom:12px;width:3px;border-radius:2px;background:var(--line)}
+.B .blk.ok::before{background:var(--ok)}.B .blk.cm::before{background:var(--cm-strong)}.B .blk.chg::before{background:var(--accent)}
+.B .blk h3{margin:0;font-size:17px}
+.B .blk .hd{display:flex;align-items:center;gap:8px;justify-content:space-between}
+.B .blk .actions{margin-top:8px}
+.B .blk.ok .body{opacity:.72}
+.B .rail{border-left:1px solid var(--line);padding:16px;position:sticky;top:54px;height:calc(100vh - 54px);overflow:auto}
+.B .rail h4{margin:0 0 10px;font-size:13px;color:var(--muted);font-weight:600}
+
+/* layout C: checklist */
+.C{max-width:880px;margin:20px auto;padding:0 16px}
+.C .row{background:var(--panel);border:1px solid var(--line);border-radius:10px;margin-bottom:8px}
+.C .rh{display:grid;grid-template-columns:28px 64px minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px 12px;cursor:pointer}
+.C .rh .t{font-size:14.5px}
+.C .rh .id{font-family:ui-monospace,Menlo,monospace;font-size:12px;color:var(--muted)}
+.C .rb{padding:0 16px 14px 114px;border-top:1px solid var(--line);padding-top:12px}
+.C .grp{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin:18px 4px 8px}
+.ck{width:20px;height:20px;border-radius:6px;border:1.5px solid var(--line);display:grid;place-items:center;font-size:13px;background:var(--panel)}
+.ck.ok{background:var(--ok);border-color:var(--ok);color:#fff}.ck.cm{background:var(--cm-strong);border-color:var(--cm-strong);color:#000}
+
+/* popovers */
+.pop{position:absolute;z-index:50;background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 30px #0003;padding:8px}
+.pop textarea{width:280px;height:80px;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:6px;font:inherit;font-size:14px;resize:vertical}
+.pop .kinds{display:flex;gap:4px;margin:6px 0}
+.pop .kinds button{font-size:12px;border:1px solid var(--line);background:none;border-radius:99px;padding:2px 8px}
+.pop .kinds button.on{background:var(--warn-bg);color:var(--warn);border-color:transparent}
+.modal{position:fixed;inset:0;background:#0007;display:grid;place-items:center;z-index:60;padding:16px}
+.modal>div{background:var(--panel);border-radius:14px;max-width:640px;width:100%;padding:20px;max-height:85vh;overflow:auto}
+.modal pre{background:var(--code);padding:12px;border-radius:8px;font-size:12px;overflow:auto}
+.round{font-size:12.5px;background:var(--soft);padding:3px 9px;border-radius:99px;color:var(--muted)}
+
+@media (max-width:900px){
+  .B{grid-template-columns:1fr}.B .toc,.B .rail{display:none}.B .doc{padding:16px}
+  .C .rb{padding-left:16px}.C .rh{grid-template-columns:24px minmax(0,1fr) auto}.C .rh .id{display:none}
+}
+
+/* focus + topic list */
+.F{display:grid;grid-template-columns:240px minmax(0,1fr);min-height:calc(100vh - 54px)}
+.F .toc{border-right:1px solid var(--line);padding:14px 10px;position:sticky;top:54px;height:calc(100vh - 54px);overflow:auto}
+.F .toc .tg{font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin:12px 8px 4px}
+.F .toc a{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;font-size:13.5px;cursor:pointer}
+.F .toc a:hover{background:var(--soft)}.F .toc a.cur{background:var(--soft);font-weight:600}
+.F .toc .fl{margin-left:auto;color:var(--warn);font-size:12px}
+.F .stage{max-width:760px;width:100%;margin:28px auto;padding:0 16px}
+.F .nav{display:flex;justify-content:space-between;margin-top:14px;color:var(--muted);font-size:13px}
+@media (max-width:760px){.F{grid-template-columns:1fr}.F .toc{position:static;height:auto;border-right:0;border-bottom:1px solid var(--line);display:flex;overflow-x:auto;gap:4px}.F .toc .tg{display:none}.F .toc a{white-space:nowrap}}
+</style>
+</head>
+<body>
+<div class="top">
+  <div class="brand">inspec review <small>csv-export · spec.md</small></div>
+  <span class="round" id="round">Round 1</span>
+  <div class="spacer"></div>
+  <div class="progress"><div class="bar" id="bar"></div><span id="ptext"></span></div>
+  <button class="btn primary" id="submit">Submit</button>
+  <div class="seg" id="themeSeg" title="Theme">
+    <button data-t="system">System</button><button data-t="light">Light</button><button data-t="dark">Dark</button>
+  </div>
+</div>
+<main id="app"></main>
+
+<script>
+/* ---------- demo data: what the converter would produce from spec.md ---------- */
+const R1 = [
+ {id:'overview',tag:'Обзор',title:'О чём эта спека',
+  tldr:'Кнопка «Экспорт CSV» на экране «Заказы» скачивает то, что сейчас видно в таблице.',
+  body:'<p>5 правил контракта, 3 модуля кода, 1 новый эндпоинт. Большие выгрузки уходят в фоновую задачу.</p><p>Из брифа покрыты все 3 результата и основной сценарий.</p>',
+  src:'Export the Orders table to CSV from the Orders screen. 5 rows, 3 modules, 1 new endpoint.'},
+ {id:'S1',tag:'Контракт',title:'S1 · Кнопка экспорта',
+  tldr:'На экране «Заказы» в тулбаре есть кнопка «Экспорт CSV»; клик скачивает файл orders-ГГГГ-ММ-ДД.csv.',
+  body:'<p>Кнопка видна всем ролям с доступом к экрану. Имя файла — дата в часовом поясе пользователя.</p>',
+  check:'Проверка: e2e <code>orders-export.spec.ts › downloads file</code> — кликает кнопку, ждёт загрузку, сверяет имя.',
+  src:'S1 — The Orders toolbar shows an "Export CSV" button; clicking it downloads orders-YYYY-MM-DD.csv.\n  check: e2e orders-export.spec.ts › downloads file'},
+ {id:'S2',tag:'Контракт',title:'S2 · Только отфильтрованные строки',
+  tldr:'В файле ровно те строки и колонки, что видны с текущими фильтрами и сортировкой.',
+  body:'<p>Скрытые пользователем колонки в файл не попадают. Порядок строк совпадает с таблицей.</p>',
+  check:'Проверка: API-тест — 3 набора фильтров на фикстуре из 200 заказов, сравнение с выдачей таблицы.',
+  src:'S2 — The file holds exactly the rows and columns visible under the current filters and sort.'},
+ {id:'S3',tag:'Контракт',title:'S3 · Кодировка и разделитель',
+  tldr:'UTF-8 с BOM, разделитель — запятая, чтобы Excel открывал кириллицу без танцев.',
+  body:'<p>Поля с запятыми, кавычками и переводами строк экранируются по RFC 4180.</p>',
+  check:'Проверка: юнит-тест сериализатора на строках с <code>"</code>, <code>,</code>, <code>\\n</code> и кириллицей.',
+  flag:'разделитель — запятая. В русской локали Excel ждёт точку с запятой.',
+  src:'S3 — UTF-8 with BOM, comma separator; RFC 4180 quoting.'},
+ {id:'S4',tag:'Контракт',title:'S4 · Большие выгрузки',
+  tldr:'Больше 10 000 строк — экспорт идёт в фоне, по готовности приходит уведомление со ссылкой.',
+  body:'<p>Ссылка живёт 24 часа. Пока задача идёт, повторный клик не запускает вторую.</p>',
+  check:'Проверка: интеграционный тест с 10 001 строкой — ответ 202, задача в очереди, уведомление после выполнения.',
+  flag:'порог 10 000 строк и TTL ссылки 24 ч.',
+  src:'S4 — Over 10 000 rows the export runs as a background job; a notification links the file (TTL 24h).'},
+ {id:'S5',tag:'Контракт',title:'S5 · Пустой результат',
+  tldr:'Если фильтры ничего не нашли, кнопка неактивна с подсказкой «Нечего экспортировать».',
+  body:'',check:'Проверка: e2e — фильтр без совпадений, кнопка disabled, тултип.',
+  src:'S5 — With zero rows the button is disabled with tooltip "Nothing to export".'},
+ {id:'arch',tag:'Архитектура',title:'Где живёт код',
+  tldr:'Новый эндпоинт GET /orders/export переиспользует запрос таблицы; сериализатор — отдельный модуль.',
+  body:'<ul><li><code>api/orders/export.ts</code> — эндпоинт, стримит ответ</li><li><code>lib/csv.ts</code> — сериализатор (новый)</li><li><code>jobs/export-job.ts</code> — фоновая задача для S4</li></ul>',
+  src:'Architecture: GET /orders/export reuses buildOrdersQuery(); lib/csv.ts new; jobs/export-job.ts for S4.'},
+ {id:'touch',tag:'Затрагивает',title:'Что ещё меняется',
+  tldr:'Тулбар «Заказы», билдер запроса таблицы и один существующий тест на тулбар.',
+  body:'<p><code>OrdersToolbar.test.tsx</code> — снапшот поменяется (+1 кнопка).</p>',
+  src:'Touches: OrdersToolbar, buildOrdersQuery callers (2, rg "buildOrdersQuery"), OrdersToolbar.test.tsx snapshot.'},
+ {id:'oos',tag:'Не входит',title:'Вне рамок',
+  tldr:'XLSX, выбор колонок в диалоге и экспорт с других экранов — не в этой фиче.',
+  body:'',src:'Not in scope: XLSX, column picker, export from other screens.'},
+];
+// what round 2 looks like after the agent addressed comments on S3 and S4
+const R2_PATCH = {
+ S3:{tldr:'UTF-8 с BOM, разделитель <del>— запятая</del><ins>зависит от локали: «;» для ru/de/fr, «,» для остальных</ins>.',
+     flag:null, src:'S3 — UTF-8 with BOM; separator follows locale (";" for ru/de/fr, "," otherwise).'},
+ S4:{tldr:'Больше <del>10 000</del><ins>50 000</ins> строк — экспорт идёт в фоне, по готовности приходит уведомление со ссылкой.',
+     body:'<p>Ссылка живёт <del>24 часа</del><ins>7 дней</ins>. Пока задача идёт, повторный клик не запускает вторую.</p>',flag:null},
+};
+
+/* traceability: which intent outcome each row covers (from intent.md) */
+const OUTCOMES={O1:'Оператор скачивает видимые заказы одним кликом',O2:'Файл открывается в Excel без порчи кириллицы',O3:'Большая выгрузка не вешает экран'};
+const COVERS={S1:['O1'],S2:['O1'],S3:['O2'],S4:['O3'],S5:['O1']};
+
+/* ---------- state (resumable) ---------- */
+let round=1, blocks=JSON.parse(JSON.stringify(R1)), st={}, cur=0, showSrc=new Set();
+blocks.forEach(b=>st[b.id]={status:'new',comments:[]});
+function localGet(k){try{return localStorage.getItem(k)}catch(e){return null}}
+function localSet(k,v){try{localStorage.setItem(k,v)}catch(e){}}
+try{const saved=JSON.parse(localGet('iar.state'));if(saved){({round,st,cur}=saved);if(saved.blocks)blocks=saved.blocks}}catch(e){}
+function save(){localSet('iar.state',JSON.stringify({round,st,cur,blocks}))}
+
+/* ---------- theme ---------- */
+function setTheme(t){if(t==='system')document.documentElement.removeAttribute('data-theme');else document.documentElement.dataset.theme=t;
+  localSet('iar.theme',t);document.querySelectorAll('#themeSeg button').forEach(b=>b.classList.toggle('on',b.dataset.t===t))}
+setTheme(localGet('iar.theme')||'system');
+themeSeg.onclick=e=>{if(e.target.dataset.t)setTheme(e.target.dataset.t)};
+
+/* ---------- helpers ---------- */
+const stLabel={new:'Not reviewed',ok:'Approved',cm:'Has comments',chg:'Changed'};
+function badge(id){const s=st[id];return `<span class="st ${s.status}">${s.status==='ok'&&s.carried?'Approved in round '+s.carried:s.status==='chg'&&s.wasOk?'Changed after approval':stLabel[s.status]}</span>`}
+function esc(s){return s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+function cmtsHtml(id){return st[id].comments.length?`<div class="cmts">${st[id].comments.map((c,i)=>`<div class="cmt"><button class="x" onclick="delCmt('${id}',${i})">remove</button>${c.quote?`<q>${esc(c.quote)}</q>`:''}<span class="k">${c.kind}</span>${esc(c.text)}${c.reply?`<div style="margin-top:6px;color:var(--muted)"><b>Agent:</b> ${esc(c.reply)}</div>`:''}</div>`).join('')}</div>`:''}
+function trace(b){const c=COVERS[b.id];if(!c)return '';return `<div class="check" style="border-color:var(--accent)">Covers intent: ${c.map(o=>`<b>${o}</b> ${OUTCOMES[o]}`).join('; ')}</div>`}
+function content(b){return `
+  <div class="tldr" data-sel="${b.id}">${b.tldr}</div>
+  ${b.flag?`<div class="flag"><b>⚑ Agent's own decision:</b> <span data-sel="${b.id}">${b.flag}</span></div>`:''}
+  ${b.body?`<div class="body" data-sel="${b.id}">${b.body}</div>`:''}
+  ${b.check?`<div class="check" data-sel="${b.id}">${b.check}</div>`:''}
+  ${trace(b)}
+  ${showSrc.has(b.id)?`<div class="src">${esc(b.src)}</div>`:''}
+  ${cmtsHtml(b.id)}`}
+function acts(b){const s=st[b.id].status;return `<div class="actions">
+  <button class="btn ${s==='ok'?'ok':'primary'}" onclick="approve('${b.id}')">${s==='ok'?'✓ Approved':'Approve'} <span class="kbd">A</span></button>
+  <button class="btn" id="cbtn" onclick="blockComment(event,'${b.id}')">Comment on block <span class="kbd">C</span></button>
+  <button class="linkish" onclick="toggleSrc('${b.id}')">${showSrc.has(b.id)?'Hide source':'Show source'}</button></div>`}
+function nextOpen(i){for(let k=1;k<=blocks.length;k++){const j=(i+k)%blocks.length;if(st[blocks[j].id].status!=='ok')return j}return i}
+
+window.approve=id=>{const s=st[id];
+  if(s.status==='ok'){s.status=s.comments.length?'cm':'new';delete s.carried}
+  else{s.status='ok';s.comments=[];cur=nextOpen(cur)}
+  render()};
+window.toggleSrc=id=>{showSrc.has(id)?showSrc.delete(id):showSrc.add(id);render()};
+window.delCmt=(id,i)=>{st[id].comments.splice(i,1);if(!st[id].comments.length&&st[id].status==='cm')st[id].status='new';render()};
+window.go=i=>{cur=i;render()};
+
+/* ---------- layout: topic list + focus card ---------- */
+function view(){const b=blocks[cur];let lastTag='';
+  return `<div class="F">
+  <nav class="toc">${blocks.map((x,i)=>{const g=x.tag!==lastTag?`<div class="tg">${x.tag}</div>`:'';lastTag=x.tag;
+     return g+`<a class="${i===cur?'cur':''}" onclick="go(${i})"><span class="dot ${st[x.id].status}"></span><span>${x.title}</span>${x.flag?'<span class="fl">⚑</span>':''}</a>`}).join('')}</nav>
+  <div class="stage"><div class="card"><div class="hd"><span class="tag">${b.tag} · ${cur+1} of ${blocks.length}</span>${badge(b.id)}</div>
+  <h2>${b.title}</h2>${content(b)}${acts(b)}</div>
+  <div class="nav"><span><span class="kbd">↑</span> <span class="kbd">↓</span> move · select text to comment</span><span>${blocks.filter(x=>st[x.id].status!=='ok').length} left</span></div></div></div>`}
+
+function render(){
+  app.innerHTML=view();
+  document.getElementById('round').textContent='Round '+round;
+  const n=blocks.length,ok=blocks.filter(b=>st[b.id].status==='ok').length,cm=blocks.filter(b=>st[b.id].status==='cm').length,pending=n-ok-cm;
+  bar.innerHTML=`<i style="width:${ok/n*100}%;background:var(--ok)"></i><i style="width:${cm/n*100}%;background:var(--cm-strong)"></i>`;
+  ptext.textContent=`${ok}/${n} approved`+(cm?` · ${cm} with comments`:'');
+  submit.disabled=pending>0;submit.textContent=pending>0?`${pending} to review`:cm?`Send ${cm} comment${cm>1?'s':''}`:'Approve document ✓';
+  document.querySelectorAll('[data-sel]').forEach(el=>st[el.dataset.sel].comments.forEach(c=>{if(c.quote)paint(el,c.quote)}));
+  save();
+}
+function paint(el,q){const w=document.createTreeWalker(el,NodeFilter.SHOW_TEXT);let n;while(n=w.nextNode()){const i=n.data.indexOf(q);if(i>=0){const r=document.createRange();r.setStart(n,i);r.setEnd(n,i+q.length);const m=document.createElement('mark');m.className='cm';r.surroundContents(m);return}}}
+
+/* ---------- commenting ---------- */
+let pop=null;
+function closePop(){pop&&pop.remove();pop=null}
+function openPop(x,y,id,quote){closePop();let kind='change';
+  pop=document.createElement('div');pop.className='pop';pop.style.left=Math.max(8,Math.min(x,innerWidth-310))+'px';pop.style.top=(y+scrollY+8)+'px';
+  pop.innerHTML=`${quote?`<div style="font-size:12px;color:var(--muted);max-width:280px;margin-bottom:4px">“${esc(quote)}”</div>`:''}
+   <div class="kinds">${['change','question','unclear'].map(k=>`<button class="${k===kind?'on':''}" data-k="${k}">${k}</button>`).join('')}</div>
+   <textarea placeholder="What should change?"></textarea><div class="actions" style="margin-top:6px"><button class="btn primary">Save</button><button class="btn" data-c>Cancel</button></div>`;
+  document.body.appendChild(pop);const ta=pop.querySelector('textarea');ta.focus();
+  pop.querySelector('.kinds').onclick=e=>{if(e.target.dataset.k){kind=e.target.dataset.k;ta.placeholder=kind==='question'?'Ask the agent — it answers, the document stays as is':kind==='unclear'?'What is hard to follow?':'What should change?';pop.querySelectorAll('.kinds button').forEach(b=>b.classList.toggle('on',b.dataset.k===kind))}};
+  pop.querySelector('[data-c]').onclick=closePop;
+  pop.querySelector('.primary').onclick=()=>{if(!ta.value.trim())return;st[id].comments.push({quote,text:ta.value.trim(),kind});st[id].status='cm';closePop();render()};
+}
+window.blockComment=(e,id)=>{const r=e.target.getBoundingClientRect();openPop(r.left,r.bottom,id,'')};
+document.addEventListener('mouseup',e=>{if(pop&&pop.contains(e.target))return;
+  const s=getSelection();if(!s||s.isCollapsed)return;const t=s.toString().trim();if(t.length<2)return;
+  const el=(s.anchorNode.nodeType===3?s.anchorNode.parentElement:s.anchorNode).closest('[data-sel]');if(!el)return;
+  const r=s.getRangeAt(0).getBoundingClientRect();
+  closePop();pop=document.createElement('div');pop.className='pop';pop.style.left=r.left+'px';pop.style.top=(r.bottom+scrollY+6)+'px';
+  pop.innerHTML='<button class="btn primary" style="font-size:13px">💬 Comment</button>';document.body.appendChild(pop);
+  pop.firstChild.onmousedown=ev=>{ev.preventDefault();openPop(r.left,r.bottom,el.dataset.sel,t)};
+});
+document.addEventListener('mousedown',e=>{if(pop&&!pop.contains(e.target))closePop()});
+document.addEventListener('keydown',e=>{if(e.target.tagName==='TEXTAREA')return;
+  if(e.key==='ArrowDown'||e.key==='ArrowRight'||e.key==='j'){e.preventDefault();cur=Math.min(cur+1,blocks.length-1);render()}
+  if(e.key==='ArrowUp'||e.key==='ArrowLeft'||e.key==='k'){e.preventDefault();cur=Math.max(cur-1,0);render()}
+  if(e.key==='a'||e.key==='ф')approve(blocks[cur].id);
+  if(e.key==='c'||e.key==='с'){const b=document.getElementById('cbtn');b&&b.click()}
+});
+
+/* ---------- submit / round 2 (demo) ---------- */
+submit.onclick=()=>{
+  const fb=blocks.filter(b=>st[b.id].status==='cm').map(b=>({block:b.id,comments:st[b.id].comments}));
+  const payload=fb.length?{result:'changes_requested',round,approved:blocks.filter(b=>st[b.id].status==='ok').map(b=>b.id),feedback:fb}:{result:'approved',round};
+  const m=document.createElement('div');m.className='modal';
+  m.innerHTML=`<div><h3 style="margin-top:0">${fb.length?'Comments sent to the session':'Document approved'}</h3>
+   <p style="color:var(--muted);font-size:14px">${fb.length?'The agent edits spec.md and rebuilds only the blocks it touched. This tab reloads when round 2 is ready.':'The session received the approval and moves on.'}</p>
+   <pre>${esc(JSON.stringify(payload,null,2))}</pre>
+   <div class="actions">${fb.length?'<button class="btn primary" id="r2">Show round 2 (demo)</button>':''}<button class="btn" id="cl">Close</button><button class="btn" id="rs">Reset demo</button></div></div>`;
+  document.body.appendChild(m);m.querySelector('#cl').onclick=()=>m.remove();
+  m.querySelector('#rs').onclick=()=>{try{localStorage.removeItem('iar.state')}catch(e){}location.reload()};
+  const r2=m.querySelector('#r2');if(r2)r2.onclick=()=>{m.remove();toRound2()};
+};
+function toRound2(){const prev=round;round++;
+  blocks.forEach(b=>{const s=st[b.id];
+    const qs=s.comments.filter(c=>c.kind==='question');
+    if(R2_PATCH[b.id]&&s.status!=='cm'){Object.assign(b,R2_PATCH[b.id]);s.wasOk=s.status==='ok';s.status='chg';s.comments=[];delete s.carried;return}
+    if(s.status==='ok'){s.carried=s.carried||prev;return}
+    if(R2_PATCH[b.id]){Object.assign(b,R2_PATCH[b.id]);s.status='chg';s.comments=[];return}
+    if(qs.length){s.comments=qs.map(c=>({...c,reply:'Порог выбран по замеру: 10 000 строк отдаются синхронно за ~2 с. Оставить так или поменять?'}));s.status='new';return}
+    s.status='new';s.comments=[]});
+  cur=Math.max(0,blocks.findIndex(b=>st[b.id].status!=='ok'));render()}
+const _ap=window.approve;window.approve=id=>{if(st[id].status==='chg'){st[id].status='ok';cur=nextOpen(cur);render()}else _ap(id)};
+
+render();
+</script>
+</body>
+</html>
