@@ -118,8 +118,10 @@ node <skill dir>/iar/iar.mjs open --id <slug>/<kind>
   offered the review (it commits and goes on), or, when run alone, stop.
 - `{"result":"changes_requested","round":N,"approved":[…],"feedback":[{block, hash, comments:[{id, quote,
   kind, text}]}]}` (`quote` is `""` for a comment on the whole block). A feedback entry with `"block":"summary"`
-  is a remark on the document as a whole, made on its summary: act on it like a block's, on whatever blocks it
-  concerns.
+  is a remark on the document as a whole, made on its summary: act on it by editing the document through its
+  owning skill, on whatever blocks it concerns, or answer it in `replies.json`. It is never sent to the display
+  subagent as a request to reword the summary: the summary is written again from the document whenever a block
+  changes.
   - `change`: edit the block's source. Edit through the skill that owns the document (intent through
     `/inspec:brief`'s rules, spec.md only through `/inspec:spec`, plan.md through `/inspec:plan`); touch no
     block nobody commented on.
