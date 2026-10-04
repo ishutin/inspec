@@ -148,7 +148,7 @@ Log:
 Blocked: S27 needs the operator's live run in a Claude Code session: the offer from a real /inspec:spec, the browser opening on its own, the session waking from a background `wait`, the display texts absent from the session's context, chat while the page is open (stop wait, drop), Node below 18, Windows, and a reconnect after a machine restart cannot be judged by a subagent. Everything a CLI can run holds (log above). To unblock: the operator runs the Headline scenario with `/inspec:spec` in a Claude Code session, checks S27's list, and ticks it or files what fails.
 
 ## D7 — The document summary
-status: todo
+status: done
 builds on: D6
 - [x] S29
 - [x] S30
@@ -170,3 +170,5 @@ Log:
 - tests moved with S30: ui.spec's `page` fixture clicks Start review after each `goto` and `reload` (its rows are about the blocks), S19's second context checks the summary heading, S21 also scans the summary screen and counts 46 to review, round 2–4 tests write a summary display, `setup` leaves the summary entry out of `blocks`
 - addition outside the rows, at the operator's request (remove every emoji from the page UI): checked `skills/read/iar/ui/`: it holds no emoji (the Comment buttons read "Comment", "Comment on block", "Comment on document"); the only non-ASCII marks are ⚑, ✓, the arrow and ↵ key glyphs and typographic quotes, all kept; no test asserted an emoji, nothing to change
 - S33: skills/read/SKILL.md: prepare's printed list may end with the summary entry (`display/summary.<hash>.<lang>.json`, `doc`), passed to the subagent with the blocks; the brief asks for `{tldr, body, diagram}` from the whole document by the display rules (at most 200 words, nothing added); a `"block":"summary"` feedback entry is a remark on the whole document; check green (was exit 1)
+- verify: summary.test 2/2 (S29), summary.spec 3/3 (S30–S32), S33 grep exit 0, prepare.test 7/7 (S1–S4), server.test 12/12 (S5–S9, S11, S28, modes), ui.spec 14/14 (S10–S23), S25 and S26 greps exit 0, `npm test` green (node 21/21, playwright 17/17), all bare; no lint or type commands in the repository; no server left running; screenshots of a round-2 summary (diagram, a quote highlight, "Changed since round 1" with a changed block and an answer, a summary comment with its reply) in light and dark at 1280×800 and at 520 px read in the card's type, spacing and tokens; whole diff read against States and the rows: summary missing or breaking its schema, every block edit renewing its hash, another language, comments by selection and whole, sent and offline (Start review still navigates, Comment disabled), round N+1 carry, replies, drop, prepare rerun in the round, a review with only summary comments (changes_requested), state prepared before D7 (open asks for a new prepare)
+- done
