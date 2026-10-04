@@ -1,15 +1,16 @@
 #!/usr/bin/env node
-// inspec-read CLI: prepare | open | wait | drop | stop. Node >= 18, built-ins only.
+// inspec-read CLI: prepare | put | open | wait | drop | stop. Node >= 18, built-ins only.
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { UsageError, parseId, checkLang, rootDir, ensureRoot, docDir, prepare, load, badDisplays, publish, drop, readJSON } from './lib/state.mjs';
+import { UsageError, parseId, checkLang, rootDir, ensureRoot, docDir, prepare, put, load, badDisplays, publish, drop, readJSON } from './lib/state.mjs';
 
 const SERVER = path.join(path.dirname(fileURLToPath(import.meta.url)), 'lib', 'server.mjs');
 const USAGE = `usage:
   iar.mjs prepare <md> --id <slug>/<kind> --lang <tag>
+  iar.mjs put <batch.json> --id <slug>/<kind>
   iar.mjs open --id <slug>/<kind> [--no-open]
   iar.mjs wait --id <slug>/<kind>
   iar.mjs drop --id <slug>/<kind>
@@ -101,6 +102,21 @@ const commands = {
     const lang = checkLang(opt.lang);
     const out = prepare(path.resolve(pos[0]), { slug, kind, lang, cwd: process.cwd() });
     process.stdout.write(out.length ? `[\n${out.map((b) => JSON.stringify(b)).join(',\n')}\n]\n` : '[]\n');
+  },
+
+  put({ pos, opt }) {
+    if (pos.length !== 1) throw new UsageError('put takes one JSON file');
+    const { dir } = state(opt);
+    let batch;
+    try {
+      batch = JSON.parse(fs.readFileSync(path.resolve(pos[0]), 'utf8'));
+    } catch (e) {
+      throw new UsageError(`${pos[0]} is not a readable JSON file: ${e.message}`);
+    }
+    if (!batch || typeof batch !== 'object' || Array.isArray(batch)) throw new UsageError(`${pos[0]} must hold a JSON object of {id: entry}`);
+    const r = put(dir, batch);
+    process.stdout.write(`${JSON.stringify(r)}\n`);
+    if (r.refused.length) process.exitCode = 2;
   },
 
   async open({ opt }) {

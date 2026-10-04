@@ -151,6 +151,16 @@ Fixes from the live run:
   session acts on it by editing the document through its owning skill or answers it in `replies.json`; it is
   never sent to the display subagent as a request to reword the summary. — check: `grep -qF 'never sent to the display' skills/read/SKILL.md`
 
+After release:
+
+- **S40** `put <batch.json> --id …` takes every display entry of a round in one JSON object keyed by block id
+  (`"summary"` for the summary), stores each valid one at its cache path and prints
+  `{"written":[ids],"refused":[{id, reason}]}`; an entry that breaks its schema or names no block of the round is
+  refused and not written, and `put` then exits 2; a file that is not a JSON object exits 2 and writes nothing.
+  — check: `node --test --test-timeout=30000 tests/read/put.test.mjs`
+- **S41** brief, spec and plan ask "Agree as is, edit in chat, or open the review with /inspec:read." in plain
+  text as the last line of the reply, not with a question tool. — check: `grep -qF 'not with a question tool' skills/brief/SKILL.md && grep -qF 'not with a question tool' skills/spec/SKILL.md && grep -qF 'not with a question tool' skills/plan/SKILL.md`
+
 Skills and docs:
 
 - **S25** The sentence "Agree as is, edit in chat, or open the review with /inspec:read." is in
@@ -284,7 +294,8 @@ operator picks the review there.
 4. Run `node <skill dir>/iar/iar.mjs prepare <md> --id <slug>/<kind> --lang <lang>`. If it prints any block,
    start one `general-purpose` subagent (no model override) with the printed blocks (and the summary entry), `lang`, the intent's path,
    the display rules of State, and the flags as a list of block id and text (only the session knows them). The
-   subagent writes every `display/<hash>.<lang>.json` and replies with the ids it wrote, so the texts stay out
+   subagent writes every entry into one batch file with one write and stores them with `put` (S40), replying
+   with the ids it wrote, so the texts stay out
    of the session's context. If `open` then refuses an entry (S5), the same subagent is asked again for those
    ids only.
 5. Run `open`, then `wait` with Bash `run_in_background: true`. The harness wakes the session when `wait`
