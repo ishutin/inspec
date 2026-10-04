@@ -273,3 +273,41 @@ test('S42 a link to a local file or anchor shows its label, never raw markdown; 
   await expect(c.locator('.body')).toContainText('[bad](javascript:alert(1))');
   await expect(c.locator('.tldr')).toHaveText('See the plan.');
 });
+
+test('S42 a code span inside a link target never lands in an attribute', async ({ page }) => {
+  const body = 'A [x](`" onmouseover="window.__p=1`) and [y](https://e.com/`"x`).';
+  const d = setup('spec', (b) => ({ ...en(b), body: b.id === 'S1' ? body : en(b).body }));
+  await page.goto(d.url);
+  await topic(page, 'S1').click();
+  const c = card(page);
+  await expect(c.locator('.body .local-link, .body a')).toHaveCount(0);
+  await expect(c.locator('.body code')).toHaveCount(2);
+  await c.locator('.body code').first().hover();
+  expect(await page.evaluate(() => window.__p)).toBeUndefined();
+});
+
+test('S43 a long inline code span with no spaces wraps inside the card at 1280 and 520', async ({ page }) => {
+  const long = 'rg -n "' + Array.from({ length: 12 }, (_, i) => `SomeVeryLongSymbolName${i}`).join('|') + '" Source/eclipse';
+  const d = setup('spec', (b) => ({ ...en(b), body: b.id === 'S1' ? `Search: \`${long}\` finds it.` : en(b).body, tldr: b.id === 'S1' ? `Run \`${long}\`.` : en(b).tldr }));
+  for (const width of [1280, 520]) {
+    await page.setViewportSize({ width, height: 800 });
+    await page.goto(d.url);
+    await topic(page, 'S1').click();
+    const out = await card(page).evaluate((c) => {
+      const box = c.getBoundingClientRect();
+      return [...c.querySelectorAll('.tldr code, .body code')].flatMap((el) => [...el.getClientRects()]).filter((r) => r.right > box.right + 0.5 || r.left < box.left - 0.5).length;
+    });
+    expect(out, `code outside the card at ${width}`).toBe(0);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth)).toBe(false);
+  }
+});
+
+test('S42 local links inside list items show their labels too', async ({ page }) => {
+  const body = '- [intent.md](intent.md): outcomes.\n- [../combat-stance/spec.md](../combat-stance/spec.md): terms.';
+  const d = setup('spec', (b) => ({ ...en(b), body: b.id === 'S1' ? body : en(b).body }));
+  await page.goto(d.url);
+  await topic(page, 'S1').click();
+  const items = card(page).locator('.body li');
+  await expect(items).toHaveText(['intent.md: outcomes.', '../combat-stance/spec.md: terms.']);
+  await expect(card(page).locator('.body li .local-link').nth(1)).toHaveAttribute('title', '../combat-stance/spec.md');
+});

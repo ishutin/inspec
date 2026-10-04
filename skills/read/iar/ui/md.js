@@ -5,10 +5,11 @@ const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;
 export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ESC[c]);
 
 const CODE_SPAN = /(`+)([\s\S]*?[^`])\1(?!`)/g;
-const LINK = /\[([^\]\n]+)\]\((https?:\/\/[^\s()<>"']+)\)/g;
+const LINK = /\[([^\]\n]+)\]\((https?:\/\/[^\s()<>"'\u0000]+)\)/g;
 // A link to a local file or anchor (`[intent.md](intent.md)`) has no page to open here: its label shows as
-// text, with the target on hover. A link with any other scheme stays as written, inert.
-const LOCAL_LINK = /\[([^\]\n]+)\]\((?![a-z][a-z0-9+.-]*:)([^\s()<>"']+)\)/gi;
+// text, with the target on hover. A link with any other scheme stays as written, inert. Neither target may hold
+// a held placeholder (\u0000), so a code span can never land inside an attribute.
+const LOCAL_LINK = /\[([^\]\n]+)\]\((?![a-z][a-z0-9+.-]*:)([^\s()<>"'\u0000]+)\)/gi;
 
 function emphasis(s) {
   return s

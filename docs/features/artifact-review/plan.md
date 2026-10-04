@@ -215,6 +215,7 @@ builds on: D8
 - [x] S40
 - [x] S41
 - [x] S42
+- [x] S43
 Notes: from the first real use (Windows): the display subagent wrote one file per block, a turn each, so a
 13-block spec took 4 minutes. `put` stores a whole batch from one file; SKILL.md's brief asks for one write and
 one `put`. The offer is asked in plain text, not with AskUserQuestion. ~45 source lines.
@@ -225,5 +226,8 @@ Log:
 - S36 reworded with the operator: a wide flow scrolls inside its card instead of squeezing its steps (code spans no
   longer broken mid-word), and the check/covers line scrolls the same way; test updated, red on the old CSS
 - S42: a local-file or anchor link (`[intent.md](intent.md)`) shows its label with the target on hover; red before
-- verify: put.test 3/3, S25 and S41 greps green, `npm test` green (node 25/25, Playwright 22/22)
+- S42 hardened after an automated security review: neither link target may hold a held placeholder (\u0000), so a
+  code span can never land in an attribute; test red before; list items covered
+- S43: long inline code without spaces wraps anywhere in prose fields; red before
+- verify: put.test 3/3, S25 and S41 greps green, `npm test` green (node 25/25, Playwright 25/25)
 - done

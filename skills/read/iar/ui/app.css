@@ -221,3 +221,5 @@ mark.cm.old{background:none;border-bottom-style:dashed}
 .local-link{border-bottom:1px dotted var(--muted);cursor:help}
 @media (max-width:760px){.flow{overflow-x:visible}.flow li{min-width:0;flex:none}.flow code,.dia .flow code{white-space:normal;overflow-wrap:anywhere}}
 
+/* Inline code in prose wraps anywhere when it has no space to break at (a long regex or path). */
+.tldr code,.body code,.src code,.cmt code,.flag code{overflow-wrap:anywhere;word-break:break-word}

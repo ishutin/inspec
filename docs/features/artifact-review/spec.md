@@ -161,6 +161,8 @@ After release:
   — check: `node --test --test-timeout=30000 tests/read/put.test.mjs`
 - **S42** A link to a local file or anchor (`[intent.md](intent.md)`) shows its label as text, with the target on
   hover, never as raw markdown; a link with another scheme stays inert text (S22). — check: `npx playwright test tests/read/qa-fixes.spec.mjs`
+- **S43** An inline code span with no space to break at (a long regex or path) wraps inside the card in the summary,
+  body, source, comments and flag, at 1280 and 520, with no horizontal page scroll. — check: `npx playwright test tests/read/qa-fixes.spec.mjs`
 - **S41** brief, spec and plan ask "Agree as is, edit in chat, or open the review with /inspec:read." in plain
   text as the last line of the reply, not with a question tool. — check: `grep -qF 'not with a question tool' skills/brief/SKILL.md && grep -qF 'not with a question tool' skills/spec/SKILL.md && grep -qF 'not with a question tool' skills/plan/SKILL.md`
 
