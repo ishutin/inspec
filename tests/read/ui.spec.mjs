@@ -340,9 +340,12 @@ test('S18 the submit button, the sent state, the next round and Reconnecting…'
   await expect(page.locator('#round')).toHaveText('Round 2', { timeout: 5000 });
   expect(await page.evaluate(() => window.__sameTab)).toBe(true);
   await expect(page.locator('#notice')).toBeHidden();
-  await expect(submit).toHaveText('2 to review');
+  // D1 was approved and is unchanged, so it stays approved (S12); D2 had comments and changed.
+  await expect(submit).toHaveText('1 to review');
   await topic(page, 'D1').click();
-  await page.keyboard.press('Enter');
+  await expect(card(page).locator('.hd .st')).toHaveText('Approved in round 1');
+  await topic(page, 'D2').click();
+  await expect(card(page).locator('.hd .st')).toHaveText('Changed');
   await page.keyboard.press('Enter');
   await expect(submit).toHaveText('Approve document');
   await expect(submit).toBeEnabled();
@@ -781,4 +784,195 @@ test('S20 at 760 px or less the topic list is one scrolling row, the focused top
     await expect(card(page).locator('.tag')).toContainText('1 of 42');
     await holds('back at the first');
   }
+});
+
+// ---------- the next round (S12, S13, S14) ----------
+// A small spec of rows S1–S5 whose source text the test edits between rounds.
+const ROWS = { S1: 'one', S2: 'two', S3: 'three', S4: 'four', S5: 'five' };
+const rowsDoc = (rows) => `# Demo\n\n## Contract\n\n${Object.entries(rows).map(([id, t]) => `- **${id}** ${t}`).join('\n')}\n`;
+// A display whose texts carry the row's source words, so every version of a row has its own display.
+const words = (b) => b.source.replace(/^[\s\S]*?\*\*\w+\*\* /, '').trim();
+const vDisplay = (b) => ({
+  section: 'Contract',
+  title: `${b.id} · Title ${words(b)}`,
+  tldr: `The row says ${words(b)} today.`,
+  body: `First paragraph about ${words(b)}.\n\n- a list item ${words(b)}`,
+  check: `Proved by \`npm test\` on ${words(b)}.`,
+  flag: null,
+  covers: [],
+  diagram: { type: 'compare', before: { label: 'Was', text: 'old' }, after: { label: 'Now', text: `diagram ${words(b)}` } },
+});
+
+// Writes rows as docs/features/demo/spec.md, prepares it and writes the displays it asks for.
+function round(d, rows) {
+  fs.writeFileSync(docPath(d.repo, 'spec'), rowsDoc(rows));
+  for (const b of prepare(d.repo, 'spec')) writeDisplay(b, vDisplay(b));
+}
+
+function setupRows() {
+  const repo = mkRepo();
+  const d = { repo, kind: 'spec' };
+  round(d, ROWS);
+  d.url = openUrl(repo, 'spec');
+  d.api = d.url.replace('/demo/spec', '/api/demo/spec');
+  docs.push(d);
+  return d;
+}
+
+const cm = (text, kind = 'change', quote = '') => ({ status: 'cm', comments: [{ quote, kind, text }] });
+const submitRound = async (d) => expect((await fetch(`${d.api}/submit`, { method: 'POST' })).status).toBe(200);
+const badgeOf = async (page, id) => {
+  await topic(page, id).click();
+  return card(page).locator('.hd .st');
+};
+
+test('S12 round N+1 carries each block: approved, changed after approval, changed, not reviewed with read-only comments, new, removed', async ({ page }) => {
+  const d = setupRows();
+  const ids = Object.keys((await serverReview(d)).blocks);
+  expect(ids).toEqual(expect.arrayContaining(['S1', 'S2', 'S3', 'S4', 'S5']));
+  const r1 = Object.fromEntries(ids.map((id) => [id, { status: 'ok' }]));
+  Object.assign(r1, { S3: cm('Say three better.'), S4: cm('Why four?', 'question') });
+  expect((await put(d, r1)).status).toBe(204);
+  await submitRound(d);
+
+  // Round 2: S2 and S3 edited, S4 unchanged, S5 removed, S6 new.
+  round(d, { S1: 'one', S2: 'two, edited', S3: 'three, edited', S4: 'four', S6: 'six' });
+  await page.goto(d.url);
+  await expect(page.locator('#round')).toHaveText('Round 2');
+  await expect(topic(page, 'S5')).toHaveCount(0);
+  await expect(await badgeOf(page, 'S1')).toHaveText('Approved in round 1');
+  await expect(topic(page, 'S1').locator('.dot')).toHaveClass(/\bok\b/);
+  await expect(await badgeOf(page, 'S2')).toHaveText('Changed after approval');
+  await expect(await badgeOf(page, 'S3')).toHaveText('Changed');
+  await expect(topic(page, 'S3').locator('.dot')).toHaveClass(/\bchg\b/);
+  await expect(await badgeOf(page, 'S4')).toHaveText('Not reviewed');
+  const old = card(page).locator('.cmts .cmt');
+  await expect(old).toHaveCount(1);
+  await expect(old).toHaveClass(/\bold\b/);
+  await expect(old).toContainText('Why four?');
+  await expect(old.getByRole('button', { name: 'remove' })).toHaveCount(0);
+  await expect(await badgeOf(page, 'S6')).toHaveText('Not reviewed');
+  await expect(page.locator('#submit')).toHaveText('4 to review');
+  const rv = await serverReview(d);
+  expect(rv.round).toBe(2);
+  expect(Object.keys(rv.blocks)).not.toContain('S5');
+  expect(rv.blocks.S1).toMatchObject({ status: 'ok', approvedRound: 1 });
+  expect(rv.blocks.S2).toMatchObject({ status: 'chg', wasApproved: true });
+  expect(rv.blocks.S3).toMatchObject({ status: 'chg', wasApproved: false });
+  expect(rv.blocks.S4).toMatchObject({ status: 'new', comments: [{ kind: 'question', text: 'Why four?', round: 1 }] });
+
+  // A prepare rerun inside round 2 keeps the carry, and so does an edit made before the page is used.
+  round(d, { S1: 'one', S2: 'two, edited', S3: 'three, edited', S4: 'four', S6: 'six' });
+  expect((await serverReview(d)).blocks.S2).toMatchObject({ status: 'chg', wasApproved: true });
+  round(d, { S1: 'one', S2: 'two, edited again', S3: 'three, edited', S4: 'four', S6: 'six' });
+  expect((await serverReview(d)).blocks.S2).toMatchObject({ status: 'chg', wasApproved: true });
+
+  // Approve everything in round 2, submit approved; round 3 with no edits: every block approved in its round.
+  await page.reload();
+  for (const id of ['S2', 'S3', 'S4', 'S6']) {
+    await topic(page, id).click();
+    await page.keyboard.press('Enter');
+    await statusOf(d, id).toBe('ok');
+  }
+  await expect(page.locator('#submit')).toHaveText('Approve document');
+  await page.locator('#submit').click();
+  await expect(page.locator('#notice')).toContainText('Review sent');
+  expect(readJSON(`${stateDir(d.repo, 'spec')}/result.json`)).toEqual({ result: 'approved', round: 2 });
+  round(d, { S1: 'one', S2: 'two, edited again', S3: 'three, edited', S4: 'four', S6: 'six' });
+  await expect(page.locator('#round')).toHaveText('Round 3', { timeout: 5000 });
+  await expect(await badgeOf(page, 'S1')).toHaveText('Approved in round 1');
+  for (const id of ['S2', 'S3', 'S4', 'S6']) await expect(await badgeOf(page, id)).toHaveText('Approved in round 2');
+  await expect(page.locator('#submit')).toHaveText('Approve document');
+});
+
+test('S13 a changed block shows summary, body and check as a word diff against its display at the last submit; title and diagram new only', async ({ page }) => {
+  const d = setupRows();
+  const ids = Object.keys((await serverReview(d)).blocks);
+  expect((await put(d, Object.fromEntries(ids.map((id) => [id, { status: 'ok' }])))).status).toBe(204);
+  await submitRound(d);
+
+  // Round 2: S2 changes; it is approved and submitted in its new form.
+  round(d, { ...ROWS, S2: 'two words' });
+  await page.goto(d.url);
+  const c = card(page);
+  await topic(page, 'S2').click();
+  await expect(c.locator('.hd .st')).toHaveText('Changed after approval');
+  await expect(c.locator('.tldr ins')).toHaveText(['words']);
+  await expect(c.locator('.tldr del')).toHaveCount(0);
+  await expect(c.locator('h2')).toHaveText('S2 · Title two words');
+  await page.keyboard.press('Enter');
+  await statusOf(d, 'S2').toBe('ok');
+  await page.locator('#submit').click();
+  await expect(page.locator('#notice')).toContainText('Review sent');
+
+  // Round 3: S2 changes again, so it diffs against round 2's display, not round 1's.
+  round(d, { ...ROWS, S2: 'two other words' });
+  await expect(page.locator('#round')).toHaveText('Round 3', { timeout: 5000 });
+  await topic(page, 'S2').click();
+  await expect(c.locator('.hd .st')).toHaveText('Changed after approval');
+  for (const [f, n] of [['.tldr', 1], ['.body', 2], ['.meta .ck', 1]]) {
+    await expect(c.locator(`${f} ins`)).toHaveText(Array(n).fill('other'));
+    await expect(c.locator(`${f} del`)).toHaveCount(0);
+  }
+  await expect(c.locator('.tldr')).toHaveText('The row says two other words today.');
+  await expect(c.locator('.body li ins')).toHaveText('other');
+  await expect(c.locator('.meta .ck code')).toHaveText('npm test');
+
+  // Deleted and replaced words: round 4 against round 3's display (S2 approved and sent again).
+  await page.keyboard.press('Enter');
+  await statusOf(d, 'S2').toBe('ok');
+  await page.locator('#submit').click();
+  await expect(page.locator('#notice')).toContainText('Review sent');
+  round(d, { ...ROWS, S2: 'two new words' });
+  await expect(page.locator('#round')).toHaveText('Round 4', { timeout: 5000 });
+  await topic(page, 'S2').click();
+  await expect(c.locator('.tldr del')).toHaveText(['other']);
+  await expect(c.locator('.tldr ins')).toHaveText(['new']);
+  await expect(c.locator('.tldr')).toHaveText('The row says two othernew words today.');
+  await expect(c.locator('.body del')).toHaveText(['other', 'other']);
+  // Title and diagram show the new version only.
+  await expect(c.locator('h2')).toHaveText('S2 · Title two new words');
+  await expect(c.locator('h2 ins, h2 del, figure.dia ins, figure.dia del')).toHaveCount(0);
+  await expect(c.locator('figure.dia .after')).toHaveText('Nowdiagram two new words');
+  // An unchanged block shows no diff.
+  await topic(page, 'S1').click();
+  await expect(c.locator('ins, del')).toHaveCount(0);
+  // A comment's quote can still be selected and highlighted on a diffed field.
+  await topic(page, 'S2').click();
+  await selectText(page, c.locator('.tldr'), 'today');
+  await commentOnSelection(page, 'change', 'Which day?');
+  await expect(c.locator('.tldr mark.cm')).toHaveText('today');
+});
+
+test('S14 replies.json shows under each comment as "Agent" in the next round; prepare deletes it', async ({ page }) => {
+  const d = setupRows();
+  const ids = Object.keys((await serverReview(d)).blocks);
+  const r1 = Object.fromEntries(ids.map((id) => [id, { status: 'ok' }]));
+  r1.S4 = { status: 'cm', comments: [{ quote: '', kind: 'question', text: 'Why four?' }, { quote: '', kind: 'change', text: 'Say four.' }] };
+  r1.S3 = cm('Why three?', 'question');
+  expect((await put(d, r1)).status).toBe(204);
+  await submitRound(d);
+  const sent = readJSON(`${stateDir(d.repo, 'spec')}/result.json`);
+  const cid = (block, text) => sent.feedback.find((f) => f.block === block).comments.find((x) => x.text === text).id;
+
+  const replies = `${stateDir(d.repo, 'spec')}/replies.json`;
+  fs.writeFileSync(replies, JSON.stringify({ [cid('S4', 'Why four?')]: 'Because four rows were asked for.', [cid('S3', 'Why three?')]: 'Три — из intent.' }));
+  round(d, { ...ROWS, S3: 'three, edited' });
+  expect(fs.existsSync(replies)).toBe(false);
+
+  await page.goto(d.url);
+  await topic(page, 'S4').click();
+  const cmts = card(page).locator('.cmts .cmt');
+  await expect(cmts).toHaveCount(2);
+  await expect(cmts.nth(0).locator('.reply')).toHaveText('Agent Because four rows were asked for.');
+  await expect(cmts.nth(0).locator('.reply b')).toHaveText('Agent');
+  await expect(cmts.nth(1).locator('.reply')).toHaveCount(0);
+  await topic(page, 'S3').click();
+  await expect(card(page).locator('.cmts .cmt .reply')).toHaveText('Agent Три — из intent.');
+
+  // A prepare rerun without replies.json keeps the replies.
+  round(d, { ...ROWS, S3: 'three, edited' });
+  await page.reload();
+  await topic(page, 'S4').click();
+  await expect(card(page).locator('.cmts .cmt').nth(0).locator('.reply')).toContainText('Because four rows were asked for.');
 });

@@ -65,6 +65,19 @@ export function writeJSON(file, value) {
 
 const freshEntry = (hash) => ({ status: 'new', hash, approvedRound: null, prevHash: null, wasApproved: false, comments: [] });
 
+// A block's start in round K+1 from its entry as submitted in round K (S12). Earlier comments and replies stay,
+// read-only on the page; prevHash is the hash at that submit, which the page diffs against (S13).
+function carry(p, hash, K) {
+  if (!p) return freshEntry(hash);
+  const comments = structuredClone(p.comments || []);
+  const same = p.hash === hash;
+  if (p.status === 'ok') {
+    if (same) return { status: 'ok', hash, approvedRound: p.approvedRound || K, prevHash: p.hash, wasApproved: true, comments };
+    return { status: 'chg', hash, approvedRound: null, prevHash: p.hash, wasApproved: true, comments };
+  }
+  return { status: same ? 'new' : 'chg', hash, approvedRound: null, prevHash: p.hash, wasApproved: false, comments };
+}
+
 // Splits the document into dir/blocks.json and dir/review.json; returns the blocks lacking a display for lang.
 export function prepare(mdPath, { slug, kind, lang, cwd }) {
   if (!fs.existsSync(mdPath) || !fs.statSync(mdPath).isFile()) throw new UsageError(`no such file: ${mdPath}`);
@@ -82,19 +95,39 @@ export function prepare(mdPath, { slug, kind, lang, cwd }) {
   const result = readJSON(path.join(dir, 'result.json'));
   const old = readJSON(path.join(dir, 'review.json'));
   let round = readJSON(path.join(dir, 'blocks.json'))?.round || 1;
-  if (result && result.round >= round) round = result.round + 1;
+  // base.json: the review of the last submitted round, as sent; every prepare of the next round carries from it.
+  let sent;
+  if (result && result.round >= round) {
+    round = result.round + 1;
+    sent = old && old.round === result.round ? old : null;
+    if (sent) writeJSON(path.join(dir, 'base.json'), sent);
+  } else {
+    sent = readJSON(path.join(dir, 'base.json'));
+    if (!sent || sent.round !== round - 1) sent = null;
+  }
 
   // start.json: the round as prepare starts it, before the page's edits; drop returns to it.
   const start = { round, blocks: {} };
-  for (const b of blocks) start.blocks[b.id] = freshEntry(b.hash);
+  for (const b of blocks) start.blocks[b.id] = carry(sent?.blocks[b.id], b.hash, sent?.round);
   const review = { round, blocks: {} };
   for (const b of blocks) {
     const prev = old && old.round === round ? old.blocks[b.id] : null;
     review.blocks[b.id] = prev && prev.hash === b.hash ? prev : start.blocks[b.id];
   }
+  // replies.json ({"<comment id>": text}), written by the session before prepare: read once, then deleted (S14).
+  const repliesFile = path.join(dir, 'replies.json');
+  const replies = readJSON(repliesFile);
+  if (replies && typeof replies === 'object') {
+    for (const r of [start, review]) {
+      for (const e of Object.values(r.blocks)) {
+        for (const c of e.comments) if (Object.hasOwn(replies, c.id) && typeof replies[c.id] === 'string') c.reply = replies[c.id];
+      }
+    }
+  }
   writeJSON(path.join(dir, 'blocks.json'), { doc: slug, kind, lang, round, blocks });
   writeJSON(path.join(dir, 'start.json'), start);
   writeJSON(path.join(dir, 'review.json'), review);
+  if (fs.existsSync(repliesFile)) fs.rmSync(repliesFile, { force: true });
 
   return blocks
     .filter((b) => !fs.existsSync(displayPath(dir, b.hash, lang)))
@@ -185,7 +218,12 @@ export function applyReview(dir, body) {
       if (!COMMENT_KINDS.includes(c.kind)) throw `unknown comment kind in ${id}: ${c.kind}`;
       if (typeof c.text !== 'string') throw `comment text in ${id} must be a string`;
     }
-    if (b.status !== undefined) cur.status = b.status;
+    if (b.status !== undefined) {
+      // approvedRound: the round a block was approved in; a carried approval keeps its round (S12).
+      if (b.status === 'ok' && cur.status !== 'ok') cur.approvedRound = s.round;
+      if (b.status !== 'ok') cur.approvedRound = null;
+      cur.status = b.status;
+    }
     if (b.comments !== undefined) {
       const earlier = cur.comments.filter((c) => c.round !== s.round);
       let n = 0;

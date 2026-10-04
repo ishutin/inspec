@@ -109,14 +109,19 @@ Log:
 ## D5 — The next round
 status: todo
 builds on: D4
-- [ ] S12
-- [ ] S13
-- [ ] S14
+- [x] S12
+- [x] S13
+- [x] S14
 - [ ] S24
 Notes: carry between rounds in `state.mjs` (prevHash, wasApproved, approvedRound), `replies.json` read and
 deleted by prepare, `prevDisplay` in the doc route, `ui/diff.js` (word LCS) for summary, body and check,
 read-only earlier comments with Agent replies. S24 is judged here because round 2 is the last screen the
 mockup shows. ~250 lines.
+Log:
+- started from cb882fc (branch from feature/artifact-review-d4, one linear chain); S12, S13, S14 red: new tests in ui.spec.mjs fail on their rows' assertions (no carry: "Not reviewed" for an approved block, no diff, replies.json kept)
+- S12: `carry()` in state.mjs: the round-N+1 start of each block from its entry as submitted (ok + same hash → ok with `approvedRound` kept or N; ok + changed → chg, `wasApproved`; comments + changed → chg; comments + same → new; new block fresh; removed gone), earlier comments and replies kept on every carried block; the submitted review is saved as `base.json` (not in State's file list) so a prepare rerun or an edit inside round N+1 carries from the same submit; the server sets `approvedRound` when a block turns ok and clears it otherwise; S18's test moved with the row (round 2 now starts with D1 "Approved in round 1", so "1 to review"); test seen red on "Not reviewed" for an approved block
+- S13: `ui/diff.js` (served as an asset): both versions rendered by md.js, then an LCS over the words of their text nodes marks the new field's words in `<ins>` and puts deleted runs in `<del>` where they stood, so markup stays the new version's; applied to tldr, body and check when the doc route's `prevDisplay` (display of `prevHash`, the hash at the last submit, when it differs) is set; title and diagram untouched; the quote highlight skips `<del>` text; test covers a block changed twice since approval (diffs against round 2's display, not round 1's), insert, delete+insert, list and code inside the fields, an unchanged block with no marks, and a quote on a diffed field; seen red on the missing `<ins>`
+- S14: prepare reads `replies.json`, sets `reply` on the comments it names (in start.json and review.json), and deletes it; the page already shows replies under "Agent" (D4); test seen red on the file still there
 
 ## D6 — The /inspec:read skill and the offer
 status: todo

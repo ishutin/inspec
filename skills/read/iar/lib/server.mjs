@@ -40,15 +40,19 @@ function docPayload(dir) {
     kind: s.kind,
     lang: s.lang,
     round: s.round,
-    blocks: s.blocks.map((b) => ({
-      id: b.id,
-      section: b.section,
-      group: b.group,
-      source: b.source,
-      hash: b.hash,
-      display: readJSON(displayPath(dir, b.hash, s.lang)),
-      prevDisplay: null,
-    })),
+    blocks: s.blocks.map((b) => {
+      const prev = s.review.blocks[b.id]?.prevHash;
+      return {
+        id: b.id,
+        section: b.section,
+        group: b.group,
+        source: b.source,
+        hash: b.hash,
+        display: readJSON(displayPath(dir, b.hash, s.lang)),
+        // The display at the last submit, for a block whose hash changed since (S13).
+        prevDisplay: prev && prev !== b.hash ? readJSON(displayPath(dir, prev, s.lang)) : null,
+      };
+    }),
     review: s.review,
     submitted: !!(s.result && s.result.round === s.round),
   };
@@ -91,7 +95,7 @@ ${docs.length ? `<ul>\n${items}\n</ul>` : '<p>No documents prepared.</p>'}
 
 // The page (skills/read/iar/ui/), served as is: it reads its slug and kind from its own url.
 const UI = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'ui');
-const ASSETS = { 'app.js': 'text/javascript', 'md.js': 'text/javascript', 'app.css': 'text/css' };
+const ASSETS = { 'app.js': 'text/javascript', 'md.js': 'text/javascript', 'diff.js': 'text/javascript', 'app.css': 'text/css' };
 // Display text is untrusted: no inline script, no other origin, and no token in a Referer.
 const PAGE_HEADERS = {
   'content-security-policy':

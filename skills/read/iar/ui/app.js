@@ -2,6 +2,7 @@
 // 3 s polling, round switch, Reconnecting…, theme, narrow layout and diagrams (spec S10, S15–S23).
 // Every display text goes through md.js and sits inside [data-content]; the chrome is English.
 import { esc, inline, block, code } from './md.js';
+import { diffInto } from './diff.js';
 
 const [token, slug, kind] = location.pathname.split('/').filter(Boolean).map(decodeURIComponent);
 const API = `/${encodeURIComponent(token)}/api/${encodeURIComponent(slug)}/${encodeURIComponent(kind)}`;
@@ -409,6 +410,7 @@ function render() {
     if (c) c.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   }
   for (const mx of document.querySelectorAll('.card .mx[data-cols]')) mx.style.setProperty('--cols', mx.dataset.cols);
+  diffs();
   highlight();
   header();
 }
@@ -419,6 +421,20 @@ function toast(text) {
   el.hidden = false;
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => (el.hidden = true), 5000);
+}
+
+// ---------- round-2 diff (S13) ----------
+// A block whose hash changed since the last submit shows its summary, body and check as a word diff against its
+// display at that submit; the title and the diagram show the new version only.
+function diffs() {
+  const b = doc.blocks[cur];
+  const c = document.querySelector('.card');
+  if (!b || !c || !b.prevDisplay || !b.display) return;
+  const p = b.prevDisplay;
+  for (const [sel, html] of [['.tldr', inline(p.tldr || '')], ['.body', block(p.body || '')], ['.meta .ck', inline(p.check || '')]]) {
+    const el = c.querySelector(sel);
+    if (el) diffInto(el, html);
+  }
 }
 
 // ---------- quote highlight ----------
@@ -436,7 +452,8 @@ function highlight() {
 
 function paint(el, q, mineToo) {
   const nodes = [];
-  const w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+  // Deleted words of a diff (S13) are not part of the text a quote was taken from.
+  const w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, { acceptNode: (n) => (n.parentElement.closest('del') ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT) });
   for (let n; (n = w.nextNode()); ) nodes.push(n);
   // The collapsed text, with each of its characters' node and offset.
   let text = '';
