@@ -130,7 +130,15 @@ const commands = {
     const live = await running(root);
     if (!live) return void process.stdout.write('inspec-read: not running\n');
     await request(live.port, 'POST', `/${live.token}/api/stop`);
-    for (let i = 0; i < 60 && (await running(root)); i++) await sleep(50);
+    const alive = () => {
+      try {
+        process.kill(live.pid, 0);
+        return true;
+      } catch {
+        return false;
+      }
+    };
+    for (let i = 0; i < 100 && alive(); i++) await sleep(30);
     process.stdout.write('inspec-read: stopped\n');
   },
 };

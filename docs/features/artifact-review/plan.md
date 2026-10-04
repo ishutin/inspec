@@ -9,10 +9,10 @@ status: todo
 - [x] S2
 - [x] S3
 - [x] S4
-- [ ] S6
-- [ ] S7
-- [ ] S8
-- [ ] S9
+- [x] S6
+- [x] S7
+- [x] S8
+- [x] S9
 Notes: the thinnest path through prepare, state, server and CLI, observed over HTTP: `iar.mjs` (prepare, open,
 wait, stop), `lib/parse.mjs`, `lib/state.mjs` for round 1 only (blocks.json, review.json, result.json, no carry),
 `lib/server.mjs` with server.json, the token, port reuse and the doc, review and submit routes; the page route
@@ -27,6 +27,10 @@ Log:
 - S2: hash = sha256 of source with trailing spaces and trailing blank lines removed, 12 hex; edit, whitespace and heading-rename cases tested
 - S3: prepare prints [{id, section, group, hash, source, display:<path>}] for blocks lacking display/<hash>.<lang>.json; doc route returns the written entries unchanged
 - S4: prepare exits 2 (UsageError) before any write for missing file, no ##, bad --id, kind mismatch, outside git
+- S6: server.mjs runs detached on 127.0.0.1, server.json {port, token, pid}; open reuses a server that answers /<token>/api/ping, else spawns one; opener open/xdg-open/cmd start, errors ignored; tests written after the code (it landed with prepare for S3), seen failing only on the stub
+- S7: the server listens on the stored port, else the first free from 47100; token kept; tested across stop/open, prepare, round 2 and a squatted port
+- S8: wait polls result.json every 250 ms for the round of blocks.json; comment ids c<round>-<n> assigned by the server when the page sends none; responses use `connection: close` so a client never reuses a socket of a stopped server (seen as ECONNRESET in tests)
+- S9: submit 409 on new/chg blocks or a round already sent; review PUT validated in full before writing (400 on unknown id, status or comment kind; 409 on another round)
 
 ## D2 — Guards, drop and many documents
 status: todo

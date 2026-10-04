@@ -11,7 +11,8 @@ const SLUG = /^[a-z0-9][a-z0-9._-]*$/i;
 
 function send(res, code, body, type = 'application/json; charset=utf-8') {
   const data = body === undefined ? '' : typeof body === 'string' ? body : JSON.stringify(body);
-  res.writeHead(code, { 'content-type': type, 'cache-control': 'no-store' });
+  // No keep-alive: a client must never reuse a socket of a server that was stopped and started again.
+  res.writeHead(code, { 'content-type': type, 'cache-control': 'no-store', connection: 'close' });
   res.end(data);
 }
 
@@ -64,8 +65,8 @@ export function handler(root, token, onStop) {
 
       if (rest[0] === 'api' && rest[1] === 'ping' && rest.length === 2 && m === 'GET') return send(res, 200, { pid: process.pid });
       if (rest[0] === 'api' && rest[1] === 'stop' && rest.length === 2 && m === 'POST') {
-        send(res, 204);
-        return onStop();
+        res.writeHead(204, { connection: 'close' });
+        return res.end(onStop);
       }
 
       const api = rest[0] === 'api';
@@ -128,7 +129,8 @@ export async function serve(root) {
   let server;
   const stop = () => {
     server.close();
-    setTimeout(() => process.exit(0), 50);
+    server.closeAllConnections?.();
+    setTimeout(() => process.exit(0), 20);
   };
   server = http.createServer(handler(root, token, stop));
   const tries = saved.port ? [saved.port] : [];

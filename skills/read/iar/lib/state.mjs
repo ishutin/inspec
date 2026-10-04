@@ -120,7 +120,11 @@ export function applyReview(dir, body) {
     if (b.comments !== undefined) {
       const earlier = cur.comments.filter((c) => c.round !== s.round);
       let n = 0;
-      for (const bl of Object.values(next.blocks)) for (const c of bl.comments) n = Math.max(n, Number(String(c.id).split('-')[1]) || 0);
+      const pre = `c${s.round}-`;
+      for (const bl of Object.values(next.blocks)) {
+        for (const c of bl.comments) if (String(c.id).startsWith(pre)) n = Math.max(n, Number(c.id.slice(pre.length)) || 0);
+      }
+      for (const c of mine) if (typeof c.id === 'string' && c.id.startsWith(pre)) n = Math.max(n, Number(c.id.slice(pre.length)) || 0);
       const ids = new Set();
       const kept = mine.map((c) => {
         let cid = typeof c.id === 'string' && c.id.startsWith(`c${s.round}-`) && !ids.has(c.id) ? c.id : `c${s.round}-${++n}`;
