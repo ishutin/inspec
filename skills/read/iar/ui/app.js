@@ -596,9 +596,18 @@ document.addEventListener('mousedown', (ev) => {
   if (pop && !pop.contains(ev.target) && !ev.target.closest('[data-act="comment"]')) closePop();
 });
 
+// The mouse offers "Comment" on release; a touch or keyboard selection once it rests.
+let pressing = false;
+let selTimer = null;
+document.addEventListener('mousedown', () => (pressing = true), true);
 document.addEventListener('mouseup', (ev) => {
+  pressing = false;
   if (!doc || (pop && pop.contains(ev.target))) return;
   setTimeout(offerComment);
+});
+document.addEventListener('selectionchange', () => {
+  clearTimeout(selTimer);
+  if (doc && !pressing) selTimer = setTimeout(offerComment, 350);
 });
 
 document.addEventListener('keydown', (ev) => {
@@ -622,7 +631,7 @@ document.addEventListener('keydown', (ev) => {
     return;
   }
   if (ev.key === 'Escape' && pop) return closePop();
-  if (ev.shiftKey && ev.key.startsWith('Arrow')) return setTimeout(offerComment); // a keyboard selection
+  if (ev.shiftKey && ev.key.startsWith('Arrow')) return; // extends a selection
   if (ev.metaKey || ev.ctrlKey || ev.altKey) return;
   if (ev.target.closest && ev.target.closest('input, textarea, select, [contenteditable]')) return;
   if (ev.key === 'ArrowDown' || ev.code === 'KeyJ') {

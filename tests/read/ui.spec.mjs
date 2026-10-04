@@ -27,7 +27,7 @@ const ru = (b) => ({
   check: row(b.id) ? `Проверка: \`npm test\` для ${b.id}.` : null,
   flag: b.id === 'S3' ? 'Решение агента без оператора.' : null,
   covers: row(b.id) ? [{ id: 'O2', text: 'Читается короткими блоками' }] : [],
-  diagram: null,
+  diagram: b.id === 'S3' ? { type: 'matrix', caption: 'Подпись', note: 'Заметка', cols: ['До', 'После'], rows: [{ label: 'Строка', cells: [{ text: 'было', tag: 'Метка', tone: 'ok' }, { text: '`код`' }] }] } : null,
 });
 
 // Writes a display entry as the session's subagent does.
@@ -395,6 +395,7 @@ test('S21 with Russian display text, no Cyrillic outside [data-content]; the int
   }
   await topic(page, 'S3').click();
   await expect(card(page).locator('.flag')).toContainText('Решение агента');
+  await expect(card(page).locator('.dia')).toContainText('Подпись');
   await expect(card(page).locator('.meta b')).toHaveAttribute('title', 'Читается короткими блоками');
   await card(page).getByRole('button', { name: 'Show source' }).click();
   await page.keyboard.press('c');
