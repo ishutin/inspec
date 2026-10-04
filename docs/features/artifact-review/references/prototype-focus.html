@@ -6,18 +6,18 @@
 <title>inspec review</title>
 <style>
 :root{
-  --bg:#f7f7f5;--panel:#fff;--ink:#1d1d1b;--muted:#6b6b66;--line:#e4e3de;--soft:#efeeea;
+  --bg:#f7f7f5;--panel:#fff;--ink:#1d1d1b;--ink-2:#3d3c38;--muted:#76746e;--line:#e4e3de;--soft:#efeeea;
   --accent:#3b5bdb;--accent-ink:#fff;--ok:#2b8a3e;--ok-bg:#e6f4ea;--warn:#b35c00;--warn-bg:#fff3e0;
   --cm:#f2c94c55;--cm-strong:#e0a800;--del:#fde2e1;--ins:#dcf5e3;--code:#f1f0ec;
   --r:10px;--shadow:0 1px 2px #0000000d,0 4px 16px #0000000a;
   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --bg:#141413;--panel:#1d1d1b;--ink:#ecebe6;--muted:#9a9992;--line:#2f2e2b;--soft:#262523;
+  --bg:#141413;--panel:#1b1b1a;--ink:#e6e4dd;--ink-2:#b9b7af;--muted:#85837c;--line:#2f2e2b;--soft:#262523;
   --accent:#7c94ff;--accent-ink:#0d0d0c;--ok:#5cc777;--ok-bg:#1c3324;--warn:#ffb05c;--warn-bg:#3a2a14;
   --cm:#e0a80040;--cm-strong:#f2c94c;--del:#4a1f1f;--ins:#1b3d27;--code:#262523;--shadow:none;}}
 :root[data-theme="dark"]{
-  --bg:#141413;--panel:#1d1d1b;--ink:#ecebe6;--muted:#9a9992;--line:#2f2e2b;--soft:#262523;
+  --bg:#141413;--panel:#1b1b1a;--ink:#e6e4dd;--ink-2:#b9b7af;--muted:#85837c;--line:#2f2e2b;--soft:#262523;
   --accent:#7c94ff;--accent-ink:#0d0d0c;--ok:#5cc777;--ok-bg:#1c3324;--warn:#ffb05c;--warn-bg:#3a2a14;
   --cm:#e0a80040;--cm-strong:#f2c94c;--del:#4a1f1f;--ins:#1b3d27;--code:#262523;--shadow:none;}
 *{box-sizing:border-box}
@@ -52,10 +52,16 @@ ins{background:var(--ins);text-decoration:none}
 .st.cm{background:var(--warn-bg);color:var(--warn)}
 .st.new{background:var(--soft);color:var(--muted)}
 .st.chg{background:var(--accent);color:var(--accent-ink)}
-.flag{background:var(--warn-bg);color:var(--warn);border-radius:8px;padding:8px 10px;font-size:13.5px;margin:10px 0}
-.flag b{font-weight:600}
-.tldr{font-size:16px;font-weight:550;margin:4px 0 8px}
-.body p{margin:.5em 0}.body ul{margin:.4em 0;padding-left:1.2em}
+.flag{border-left:2px solid var(--warn);padding:2px 0 2px 12px;margin:18px 0;font-size:14.5px;line-height:1.6;color:var(--ink-2)}
+.flag .lab{display:block;color:var(--warn);font-size:11.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;margin-bottom:2px}
+.tldr{font-size:18px;line-height:1.55;font-weight:400;color:var(--ink);margin:10px 0 0;letter-spacing:-.003em}
+.body{font-size:15.5px;line-height:1.7;color:var(--ink-2);margin-top:14px}
+.body p{margin:0 0 .7em}.body ul,.body ol{margin:0 0 .7em;padding-left:1.25em}.body li{margin:.2em 0}.body li::marker{color:var(--muted)}
+.body b{font-weight:600;color:var(--ink)}
+.card code,.body code{font-size:.84em;background:var(--soft);color:inherit;padding:.1em .35em;border-radius:4px}
+.facts{margin-top:20px;padding-top:14px;border-top:1px solid var(--line);display:grid;grid-template-columns:auto 1fr;gap:8px 16px;font-size:14px;line-height:1.55;color:var(--ink-2)}
+.facts dt{color:var(--muted);font-size:11.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;padding-top:2px}
+.facts dd{margin:0}.facts dd b{color:var(--ink);font-weight:600}
 .check{font-size:13px;color:var(--muted);border-left:3px solid var(--line);padding-left:10px;margin-top:10px}
 .src{white-space:pre-wrap;font-family:ui-monospace,Menlo,monospace;font-size:12.5px;background:var(--code);padding:10px;border-radius:8px;margin-top:10px}
 .cmts{margin-top:12px;display:flex;flex-direction:column;gap:6px}
@@ -72,9 +78,10 @@ ins{background:var(--ins);text-decoration:none}
 .A .dots{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:14px}
 .A .dots button{width:28px;height:8px;border:0;border-radius:4px;background:var(--soft);padding:0}
 .A .dots button.ok{background:var(--ok)}.A .dots button.cm{background:var(--cm-strong)}.A .dots button.cur{outline:2px solid var(--accent);outline-offset:2px}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:22px 24px;box-shadow:var(--shadow)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:28px 32px 22px;box-shadow:var(--shadow)}
+.card .actions{margin-top:22px;padding-top:18px;border-top:1px solid var(--line)}
 .card .hd{display:flex;justify-content:space-between;align-items:center;gap:8px}
-.card h2{margin:6px 0 2px;font-size:22px;letter-spacing:-.01em}
+.card h2{margin:10px 0 0;font-size:24px;line-height:1.25;font-weight:650;letter-spacing:-.015em;color:var(--ink)}
 .A .nav{display:flex;justify-content:space-between;margin-top:14px;color:var(--muted);font-size:13px}
 .kbd{font-family:ui-monospace,Menlo,monospace;font-size:11px;border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:0 4px}
 
@@ -140,9 +147,36 @@ ins{background:var(--ins);text-decoration:none}
   .F .toc a{flex:none;white-space:nowrap;padding:4px 10px;border:1px solid var(--line);border-radius:99px;font-size:13px}
   .F .toc a.cur{border-color:var(--accent)}
   .F .stage{margin:16px auto}
-  .card{padding:18px 16px}.card h2{font-size:19px}
+  .card{padding:20px 18px 16px}.card h2{font-size:20px}.tldr{font-size:16.5px}.facts{grid-template-columns:1fr;gap:2px}.facts dd{margin-bottom:8px}
   .top{position:static}
 }
+
+/* diagrams */
+.dia{margin:18px 0 6px}
+.dia .cap{font-size:11.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+.mx{display:grid;grid-template-columns:auto 1fr 1fr;gap:6px;font-size:14px;line-height:1.45}
+.mx>div{padding:10px 12px;border-radius:8px;background:var(--soft);color:var(--ink-2)}
+.mx .h{background:none;color:var(--muted);font-size:12.5px;padding:4px 12px}
+.mx .r{background:none;color:var(--ink);font-weight:600;font-size:13.5px;display:flex;align-items:center;padding-left:0}
+.mx .st{display:inline-block;margin-bottom:4px}
+.flow{display:flex;font-size:13.5px;line-height:1.4;list-style:none;margin:0;padding:0}
+.flow li{display:flex;align-items:stretch;flex:1 1 0;min-width:0}
+.flow li .n{flex:1}
+.flow li+li::before{content:"→";align-self:center;color:var(--muted);padding:0 8px}
+.flow .n{background:var(--soft);border-radius:8px;padding:8px 10px;color:var(--ink-2)}
+.flow .n b{display:block;color:var(--ink);font-weight:600;font-size:12.5px;margin-bottom:2px}
+.flow .n.you{background:transparent;border:1px dashed var(--accent)}
+.dia .note{font-size:13px;color:var(--muted);margin-top:10px}
+.stt{display:grid;grid-template-columns:auto auto auto 1fr;gap:6px 10px;align-items:center;font-size:14px}
+.stt .s{background:var(--soft);border-radius:6px;padding:3px 9px;color:var(--ink);white-space:nowrap;font-size:13px}
+.stt .ar{color:var(--muted)}.stt .on{color:var(--ink-2)}
+.cmp{display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:14px;line-height:1.5}
+.cmp>div{background:var(--soft);border-radius:8px;padding:10px 12px;color:var(--ink-2)}
+.cmp b{display:block;font-size:11.5px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+.cmp .after{box-shadow:inset 2px 0 0 var(--ok)}
+@media (max-width:760px){.flow{flex-direction:column}.flow li{flex-direction:column}.flow li+li::before{content:"↓";align-self:flex-start;padding:4px 14px}.flow .n{max-width:none}.cmp{grid-template-columns:1fr}.stt{grid-template-columns:auto auto auto;}.stt .on{grid-column:1/-1;margin:-2px 0 6px}}
+.lead-q{color:var(--muted);font-size:12.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;margin:18px 0 4px}
+@media (max-width:760px){.mx{grid-template-columns:1fr!important}.mx .h{display:none}.mx .r{padding:10px 0 0}}
 </style>
 </head>
 <body>
@@ -234,17 +268,27 @@ const stLabel={new:'Not reviewed',ok:'Approved',cm:'Has comments',chg:'Changed'}
 function badge(id){const s=st[id];return `<span class="st ${s.status}">${s.status==='ok'&&s.carried?'Approved in round '+s.carried:s.status==='chg'&&s.wasOk?'Changed after approval':stLabel[s.status]}</span>`}
 function esc(s){return s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
 function cmtsHtml(id){return st[id].comments.length?`<div class="cmts">${st[id].comments.map((c,i)=>`<div class="cmt"><button class="x" onclick="delCmt('${id}',${i})">remove</button>${c.quote?`<q>${esc(c.quote)}</q>`:''}<span class="k">${c.kind}</span>${esc(c.text)}${c.reply?`<div style="margin-top:6px;color:var(--muted)"><b>Agent:</b> ${esc(c.reply)}</div>`:''}</div>`).join('')}</div>`:''}
-function trace(b){const c=COVERS[b.id];if(!c)return '';return `<div class="check" style="border-color:var(--accent)">Covers intent: ${c.map(o=>`<b>${o}</b> ${OUTCOMES[o]}`).join('; ')}</div>`}
+/* ---------- diagrams: typed JSON, drawn by the page ---------- */
+function dt(t){return esc(String(t??'')).replace(/`([^`]+)`/g,'<code>$1</code>')}
+const DIAGRAMS={
+  flow:d=>`<ol class="flow">${d.steps.map(x=>`<li><div class="n ${x.actor==='you'?'you':''}"><b>${dt(x.label)}</b>${dt(x.text)}</div></li>`).join('')}</ol>${d.loop?`<div class="note">↺ ${dt(d.loop)}</div>`:''}`,
+  matrix:d=>`<div class="mx" style="grid-template-columns:auto ${d.cols.map(()=> '1fr').join(' ')}"><div class="h"></div>${d.cols.map(c=>`<div class="h">${dt(c)}</div>`).join('')}${d.rows.map(r=>`<div class="r">${dt(r.label)}</div>${r.cells.map(c=>`<div>${c.tag?`<span class="st ${({ok:'ok',changed:'chg',new:'new',warn:'cm'})[c.tone]||'new'}">${dt(c.tag)}</span><br>`:''}${dt(c.text)}</div>`).join('')}`).join('')}</div>`,
+  states:d=>`<div class="stt">${d.transitions.map(t=>`<span class="s">${dt(t.from)}</span><span class="ar">→</span><span class="s">${dt(t.to)}</span><span class="on">${dt(t.on)}</span>`).join('')}</div>`,
+  compare:d=>`<div class="cmp"><div><b>${dt(d.before.label)}</b>${dt(d.before.text)}</div><div class="after"><b>${dt(d.after.label)}</b>${dt(d.after.text)}</div></div>`,
+};
+function renderDiagram(d){const f=DIAGRAMS[d&&d.type];if(!f)return '';
+  return `<figure class="dia" data-content style="margin:18px 0 6px">${d.caption?`<figcaption class="cap">${dt(d.caption)}</figcaption>`:''}${f(d)}${d.note?`<div class="note">${dt(d.note)}</div>`:''}</figure>`}
+function trace(b){const c=COVERS[b.id];if(!c)return '';return `<dt>Covers</dt><dd>${c.map(o=>`<b>${o}</b> ${OUTCOMES[o]}`).join('<br>')}</dd>`}
 function content(b){return `
   <div class="tldr" data-sel="${b.id}">${b.tldr}</div>
-  ${b.flag?`<div class="flag"><b>⚑ Agent's own decision:</b> <span data-sel="${b.id}">${b.flag}</span></div>`:''}
+  ${b.flag?`<div class="flag"><span class="lab">⚑ Agent's decision</span><span data-sel="${b.id}">${b.flag}</span></div>`:''}
   ${b.body?`<div class="body" data-sel="${b.id}">${b.body}</div>`:''}
-  ${b.check?`<div class="check" data-sel="${b.id}">${b.check}</div>`:''}
-  ${trace(b)}
+  ${b.diagram?renderDiagram(b.diagram):''}
+  ${b.check||COVERS[b.id]?`<dl class="facts">${b.check?`<dt>Check</dt><dd data-sel="${b.id}">${b.check}</dd>`:''}${trace(b)}</dl>`:''}
   ${showSrc.has(b.id)?`<div class="src">${esc(b.src)}</div>`:''}
   ${cmtsHtml(b.id)}`}
 function acts(b){const s=st[b.id].status;return `<div class="actions">
-  <button class="btn ${s==='ok'?'ok':'primary'}" onclick="approve('${b.id}')">${s==='ok'?'✓ Approved':'Approve'} <span class="kbd">A</span></button>
+  <button class="btn ${s==='ok'?'ok':'primary'}" onclick="approve('${b.id}')">${s==='ok'?'✓ Approved':'Approve'} <span class="kbd">↵</span></button>
   <button class="btn" id="cbtn" onclick="blockComment(event,'${b.id}')">Comment on block <span class="kbd">C</span></button>
   <button class="linkish" onclick="toggleSrc('${b.id}')">${showSrc.has(b.id)?'Hide source':'Show source'}</button></div>`}
 function nextOpen(i){for(let k=1;k<=blocks.length;k++){const j=(i+k)%blocks.length;if(st[blocks[j].id].status!=='ok')return j}return i}
@@ -264,7 +308,7 @@ function view(){const b=blocks[cur];let lastTag='';
      return g+`<a class="${i===cur?'cur':''}" onclick="go(${i})"><span class="dot ${st[x.id].status}"></span><span>${x.title}</span>${x.flag?'<span class="fl">⚑</span>':''}</a>`}).join('')}</nav>
   <div class="stage"><div class="card"><div class="hd"><span class="tag">${b.tag} · ${cur+1} of ${blocks.length}</span>${badge(b.id)}</div>
   <h2>${b.title}</h2>${content(b)}${acts(b)}</div>
-  <div class="nav"><span><span class="kbd">↑</span> <span class="kbd">↓</span> move · select text to comment</span><span>${blocks.filter(x=>st[x.id].status!=='ok').length} left</span></div></div></div>`}
+  <div class="nav"><span><span class="kbd">↑</span> <span class="kbd">↓</span> move · <span class="kbd">↵</span> approve · select text to comment</span><span>${blocks.filter(x=>st[x.id].status!=='ok').length} left</span></div></div></div>`}
 
 function render(){
   app.innerHTML=view();
@@ -305,6 +349,7 @@ document.addEventListener('mousedown',e=>{if(pop&&!pop.contains(e.target))closeP
 document.addEventListener('keydown',e=>{if(e.target.tagName==='TEXTAREA')return;
   if(e.key==='ArrowDown'||e.key==='ArrowRight'||e.key==='j'){e.preventDefault();cur=Math.min(cur+1,blocks.length-1);render()}
   if(e.key==='ArrowUp'||e.key==='ArrowLeft'||e.key==='k'){e.preventDefault();cur=Math.max(cur-1,0);render()}
+  if(e.key==='Enter'&&!e.metaKey&&!e.ctrlKey&&!(pop&&pop.contains(e.target))){e.preventDefault();approve(blocks[cur].id)}
   if(e.key==='a'||e.key==='ф')approve(blocks[cur].id);
   if(e.key==='c'||e.key==='с'){const b=document.getElementById('cbtn');b&&b.click()}
 });

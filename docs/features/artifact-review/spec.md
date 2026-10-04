@@ -30,8 +30,9 @@ Prepare (CLI `skills/read/iar/iar.mjs`):
 
 Serve (CLI and HTTP):
 
-- **S5** `serve --id …` with any block lacking a display entry exits 2 within 2 s, names every missing block id
-  on stderr, and opens no port. — check: `node --test --test-timeout=30000 tests/read/serve.test.mjs`
+- **S5** `serve --id …` with any block lacking a display entry, or with an entry that breaks the display schema
+  (a missing field, an unknown diagram type, a matrix row whose cells do not match its columns), exits 2
+  within 2 s, names every such block id on stderr, and opens no port. — check: `node --test --test-timeout=30000 tests/read/serve.test.mjs`
 - **S6** serve listens on 127.0.0.1 only, on a free port, and prints `inspec-read: <url>` as its first stdout
   line, the url holding a token of 32 hex characters. A request whose path lacks the token gets 404. It runs
   `open <url>` on darwin and `xdg-open <url>` on linux unless `--no-open`; with neither on `PATH` it still
@@ -62,7 +63,7 @@ Next round:
   "Not reviewed", and a removed block is gone. After an `approved` round with no edits, every block is
   "Approved in round K". — check: `npx playwright test tests/read/ui.spec.mjs`
 - **S13** A changed block shows its summary, body and check as a word diff against its display at the last
-  submit, with inserted and deleted words marked; its title shows the new text only. — check:
+  submit, with inserted and deleted words marked; its title and diagram show the new version only. — check:
   `npx playwright test tests/read/ui.spec.mjs`
 - **S14** Each entry of `<state>/replies.json` (`{"<comment id>":"<text>"}`) shows under that comment, labelled
   "Agent", in the next round; prepare deletes the file once read. — check:
@@ -73,9 +74,9 @@ Page (`skills/read/iar/ui/`), judged against `mockup.html`:
 - **S15** The topic list shows every block, grouped under its section name, each with its title, a status dot
   whose colour differs for each of "Not reviewed", "Approved", "Has comments" and "Changed", and ⚑ when the
   block has a flag. The focused block shows its section, "n of N", title, summary, flag, body, check, "Covers
-  intent" with outcome ids and texts, and comments; a field that is empty is not shown. Clicking a topic focuses
-  it; ↑/↓ and j/k move; A approves and moves to the next block that is not approved; A on an approved block
-  makes it "Not reviewed"; C opens a comment on the block. The spec fixture of S1 renders every block. — check:
+  intent" with outcome ids and texts, the diagram, and comments; a field that is empty is not shown. Clicking a
+  topic focuses it; ↑/↓ and j/k move; Enter outside the comment box approves and moves to the next block that
+  is not approved, and on an approved block makes it "Not reviewed"; C opens a comment on the block. The spec fixture of S1 renders every block. — check:
   `npx playwright test tests/read/ui.spec.mjs`
 - **S16** Selecting text inside a block shows "Comment". Saving with a kind (change, question or unclear)
   stores the selected text as the quote, highlights it, and marks the block "Has comments". Approve on a block
@@ -95,26 +96,32 @@ Page (`skills/read/iar/ui/`), judged against `mockup.html`:
   56 px, the focused topic is inside the viewport, and the page has no horizontal scroll. — check:
   `npx playwright test tests/read/ui.spec.mjs`
 - **S21** With Russian display text, no element outside `[data-content]` holds a Cyrillic character.
-  `[data-content]` marks each display field (section names and titles in the topic list included), each comment
-  text and each source view. The interface is English (O2). — check:
+  `[data-content]` marks each display field (section names and titles in the topic list included), each
+  diagram, each comment text and each source view. The interface is English (O2). — check:
   `npx playwright test tests/read/ui.spec.mjs`
 - **S22** Display markdown renders paragraphs, `-` and `1.` lists, bold, italic, inline and fenced code, pipe
   tables and http(s) links as elements; raw HTML, `<script>` and `javascript:` links render as inert text. —
   check: `npx playwright test tests/read/ui.spec.mjs`
-- **S23** The page matches `mockup.html` in layout, spacing and colour in light and dark, at 1280×800 and
+- **S23** Each diagram type (flow, matrix, states, compare) renders as elements holding every text of its
+  entry, with backtick spans as code and any other markup as inert text. At 760 px or less, a flow stacks its
+  steps vertically, a matrix shows one column, and the page has no horizontal scroll. — check:
+  `npx playwright test tests/read/ui.spec.mjs`
+- **S24** The page matches `mockup.html` in layout, spacing and colour in light and dark, at 1280×800 and
   520×800, in round 1 and round 2. — qa
 
 Skills and docs:
 
-- **S24** The sentence "Agree as is, edit in chat, or open the review with /inspec:read." is in
+- **S25** The sentence "Agree as is, edit in chat, or open the review with /inspec:read." is in
   `skills/brief/SKILL.md`, `skills/spec/SKILL.md` and `skills/plan/SKILL.md`, and `README.md` lists
   `/inspec:read`. — check: `grep -qF 'or open the review with /inspec:read' skills/brief/SKILL.md && grep -qF 'or open the review with /inspec:read' skills/spec/SKILL.md && grep -qF 'or open the review with /inspec:read' skills/plan/SKILL.md && grep -qF '/inspec:read' README.md`
-- **S25** `skills/brief/SKILL.md` says outcomes are written `- **O<n>** <text>`, and `skills/read/SKILL.md` exists
+- **S26** `skills/brief/SKILL.md` says outcomes are written `- **O<n>** <text>`, and `skills/read/SKILL.md` exists
   with `name: read`. — check: `grep -qF -- '- **O<n>**' skills/brief/SKILL.md && grep -qx 'name: read' skills/read/SKILL.md`
-- **S26** In a Claude Code session the Headline scenario runs end to end. The offer comes before the spec's
+- **S27** In a Claude Code session the Headline scenario runs end to end. The offer comes before the spec's
   commit, the page opens on its own, and the session waits with no time limit and wakes on submit. It edits, and
   round 2 opens with S3 diffed and S4 answered; the second submit takes the session on to `/inspec:plan`. Also
-  check: `/inspec:read <slug>` with no kind opens the newest document; the operator writing in chat while the
+  check: each block's text reads as the source rewritten for a technical reader, with every fact, number, name
+  and condition kept and nothing added, and diagrams appear only where they show the content better;
+  `/inspec:read <slug>` with no kind opens the newest document; the operator writing in chat while the
   page is open makes the session stop serve and run drop; with `node` missing or below 18 the skill says so and
   continues in chat. — qa
 
@@ -142,13 +149,23 @@ Outside the tree, per document: `$(git rev-parse --git-dir)/inspec-read/<slug>/<
   - `section`: the `##` heading in `lang`.
   - `title`: the block's id token, then ` · ` and a short name in `lang`; without a token, the name alone.
   - `tldr`: one sentence.
-  - `body`: markdown. It is the source verbatim, minus the id token and the check, when `lang` is the
-    document's language; otherwise its translation.
+  - `body`: markdown in `lang`. It is the source rewritten for a technical person to read easily, not
+    simplified. Every fact, number, name, condition, command and path stays, and nothing is added. The id
+    token and the check move to their own fields. Order, lists, short paragraphs and plain sentences serve the
+    reader. Jargon the document coins is explained on first use.
   - `check`: for a contract row, one sentence on what proves it, with the command in inline code; otherwise
     `null`.
   - `flag`: a choice the session made without the operator, or `null`. It is always `null` in a session that
     did not write the document.
   - `covers`: `[{id, text}]` for a contract row, naming the intent outcomes the row serves; otherwise `[]`.
+  - `diagram`: `null` or one typed object, set only where a picture shows the content better than text; it
+    repeats the body and never replaces it. Every text is plain, with backtick spans as code. Each has an
+    optional `caption` and `note`:
+    - `flow`: `{steps:[{label, text, actor?: "you"}], loop?}`;
+    - `matrix`: `{cols:[text], rows:[{label, cells:[{text, tag?, tone?: "ok"|"changed"|"new"|"warn"}]}]}`,
+      with one cell per column;
+    - `states`: `{transitions:[{from, to, on}]}`;
+    - `compare`: `{before:{label, text}, after:{label, text}}`.
 
   This cache is what makes O9 hold: prepare never asks twice for a hash.
 - `review.json`: `{round, blocks:{<id>:{status:"new"|"ok"|"cm"|"chg", hash, approvedRound, prevHash, wasApproved,
@@ -221,7 +238,7 @@ operator picks the review there.
 - Spec: §5 reorders to prove → offer → set `status: done` once agreed → commit.
 - Plan: the offer goes before "Commit plan.md".
 
-All three carry the S24 sentence, written without backticks around `/inspec:read` so that S24's check can
+All three carry the S25 sentence, written without backticks around `/inspec:read` so that S25's check can
 find it.
 
 ### Dev only
@@ -253,26 +270,27 @@ Tests run serve with `--no-open` in a temporary git repository. The opener test 
 - Input:
   - missing file, no `##`, bad or mismatched `--id`, not a git repository (S4);
   - missing display (S5);
-  - Cyrillic, raw HTML and `javascript:` links (S21, S22);
+  - Cyrillic, raw HTML and `javascript:` links (S21, S22), including inside diagrams (S23);
+  - a display entry that breaks the schema (S5);
   - a block added or removed between rounds (S12);
   - a renamed `##` heading changes only its section's first block (S2, Split rules).
 - Interaction:
   - approve, un-approve, approve with comments (S15, S16);
   - comment by selection or on the whole block, in each of the three kinds (S16);
-  - keyboard and topic click (S15);
+  - keyboard (Enter inside and outside the comment box) and topic click (S15);
   - submit while blocks are pending (S9, S18);
   - act after serve is gone (S18).
 - Time:
   - reload, serve restart and a prepare rerun (S10);
   - round N+1, also after an approved round (S12–S14);
   - a block changed twice since its approval, which diffs against the last submit (S13);
-  - the operator answering in chat mid-review (S11, S26);
-  - waiting with no time limit (S26).
+  - the operator answering in chat mid-review (S11, S27);
+  - waiting with no time limit (S27).
 - Environment:
   - light, dark, system, and storage throwing (S19);
-  - ≤ 760 px (S20);
+  - ≤ 760 px (S20, S23);
   - darwin and linux openers, and no opener (S6);
-  - Node missing or below 18 (S26).
+  - Node missing or below 18 (S27).
 - Actors: another local process without the token (S6).
 - Load and limits: a one-block document (S1 with a minimal fixture inside prepare.test) and this spec's
   40 blocks (S1, S15).
@@ -280,8 +298,10 @@ Tests run serve with `--no-open` in a temporary git repository. The opener test 
 ## References
 
 - `mockup.html` is the agreed page, a copy of `references/prototype-focus.html`. It shows the topic list and
-  focus card, flags, covers, comment kinds, the round-2 diff, the theme switch and the narrow layout. S23 is
+  focus card, flags, covers, comment kinds, the round-2 diff, the theme switch and the narrow layout. S24 is
   judged against it.
+- `references/demo-spec.html`: this spec as it would look in the tool, with Russian texts. S3, S12, S18
+  and "Session flow" show the rewritten body and the four diagram types; the other blocks are early drafts.
 - `references/prototype-v1-three-layouts.html`: rejected layouts, context only.
 
 ## Not in scope
