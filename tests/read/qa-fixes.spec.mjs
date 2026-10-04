@@ -173,10 +173,10 @@ test('S37 the document list uses the page\'s tokens and theme, slug and kind in 
   await page.emulateMedia({ colorScheme: 'light' });
 
   // One row per document, slug and kind in separate cells, each row a link to its document.
-  const rows = page.locator('.docs a.doc');
+  const rows = page.locator('.docs > a');
   await expect(rows).toHaveCount(2);
   const token = new URL(d.url).pathname.split('/')[1];
-  for (const [i, kind] of ['plan', 'spec'].entries()) {
+  for (const [i, kind] of ['spec', 'plan'].entries()) {
     const r = rows.nth(i);
     await expect(r).toHaveAttribute('href', `/${token}/demo/${kind}`);
     await expect(r.locator('.cell.slug')).toHaveText('demo');
@@ -188,7 +188,7 @@ test('S37 the document list uses the page\'s tokens and theme, slug and kind in 
   const [s, k] = await Promise.all([rows.first().locator('.cell.slug').boundingBox(), rows.first().locator('.cell.kind').boundingBox()]);
   expect(k.x).toBeGreaterThanOrEqual(s.x + s.width);
   expect(Math.abs(k.y - s.y)).toBeLessThan(4);
-  await rows.nth(1).click();
+  await rows.first().click();
   await expect(page).toHaveURL(d.url.replace('/plan', '/spec'));
   await expect(page.locator('.card h2')).toHaveText('About this document');
 });

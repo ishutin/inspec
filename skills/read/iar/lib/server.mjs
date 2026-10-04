@@ -84,20 +84,51 @@ function documents(root) {
   return out;
 }
 
+// The document list (S28, S37): the review page's stylesheet and theme switch; one link per document, its slug,
+// kind, round and status in cells of their own.
+const STATUS_TONE = { approved: 'ok', 'changes requested': 'cm', 'in review': 'new' };
 const listPage = (root, token) => {
   const docs = documents(root);
-  const items = docs
-    .map((d) => `<li><a href="/${token}/${esc(d.slug)}/${d.kind}"><b>${esc(d.slug)}</b> ${d.kind} · round ${d.round} · ${d.status}</a></li>`)
+  const rows = docs
+    .map(
+      (d) =>
+        `<a href="/${token}/${esc(d.slug)}/${d.kind}"><span class="cell slug">${esc(d.slug)}</span> <span class="cell kind">${d.kind}</span> <span class="cell round">round ${d.round}</span> <span class="cell status"><span class="st ${STATUS_TONE[d.status]}">${d.status}</span></span></a>`,
+    )
     .join('\n');
-  return `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>inspec-read</title>
-<h1>inspec-read</h1>
-${docs.length ? `<ul>\n${items}\n</ul>` : '<p>No documents prepared.</p>'}
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>inspec review · documents</title>
+<link rel="stylesheet" href="/${token}/ui/app.css">
+<script type="module" src="/${token}/ui/list.js"></script>
+</head>
+<body>
+<div class="top">
+  <div class="brand">inspec review <small>documents</small></div>
+  <div class="spacer"></div>
+  <div class="seg" id="themeSeg" title="Theme">
+    <button data-t="system">System</button><button data-t="light">Light</button><button data-t="dark">Dark</button>
+  </div>
+</div>
+<main class="list">
+<h1>Documents</h1>
+${
+  docs.length
+    ? `<div class="docs"><div class="dh"><span class="cell">Document</span><span class="cell">Kind</span><span class="cell">Round</span><span class="cell">Status</span></div>\n${rows}\n</div>`
+    : '<p class="empty">No documents prepared.</p>'
+}
+</main>
+</body>
+</html>
 `;
 };
 
 // The page (skills/read/iar/ui/), served as is: it reads its slug and kind from its own url.
 const UI = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'ui');
-const ASSETS = { 'app.js': 'text/javascript', 'md.js': 'text/javascript', 'diff.js': 'text/javascript', 'app.css': 'text/css' };
+const ASSETS = { 'app.js': 'text/javascript', 'theme.js': 'text/javascript', 'list.js': 'text/javascript', 'md.js': 'text/javascript', 'diff.js': 'text/javascript', 'app.css': 'text/css' };
 // Display text is untrusted: no inline script, no other origin, and no token in a Referer.
 const PAGE_HEADERS = {
   'content-security-policy':
@@ -121,7 +152,10 @@ export function handler(root, token, onStop, onRequest = () => {}) {
       const rest = parts.slice(1);
       const m = req.method;
 
-      if (rest.length <= 1 && !rest[0] && m === 'GET') return send(res, 200, listPage(root, token), 'text/html; charset=utf-8');
+      if (rest.length <= 1 && !rest[0] && m === 'GET') {
+        res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', connection: 'close', ...PAGE_HEADERS });
+        return res.end(listPage(root, token));
+      }
 
       if (rest[0] === 'api' && rest[1] === 'ping' && rest.length === 2 && m === 'GET') return send(res, 200, { pid: process.pid });
       if (rest[0] === 'api' && rest[1] === 'stop' && rest.length === 2 && m === 'POST') {

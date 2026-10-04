@@ -4,6 +4,7 @@
 // Every display text goes through md.js and sits inside [data-content]; the chrome is English.
 import { esc, inline, block, code } from './md.js';
 import { diffInto } from './diff.js';
+import { themeSwitch } from './theme.js';
 
 const [token, slug, kind] = location.pathname.split('/').filter(Boolean).map(decodeURIComponent);
 const API = `/${encodeURIComponent(token)}/api/${encodeURIComponent(slug)}/${encodeURIComponent(kind)}`;
@@ -31,29 +32,6 @@ let ask = null; // the open confirm dialog
 let timer = null;
 let toastTimer = null;
 let pushes = 0; // PUTs started: a poll that overlapped one reads again instead of taking a stale copy
-
-// ---------- theme (storage may throw: the page then stays in System) ----------
-function stored(k) {
-  try {
-    return localStorage.getItem(k);
-  } catch {
-    return null;
-  }
-}
-function store(k, v) {
-  try {
-    localStorage.setItem(k, v);
-  } catch {
-    // private mode or blocked storage: the choice lasts until reload
-  }
-}
-function setTheme(t, save = true) {
-  if (!['system', 'light', 'dark'].includes(t)) t = 'system';
-  if (t === 'system') delete document.documentElement.dataset.theme;
-  else document.documentElement.dataset.theme = t;
-  if (save) store('iar.theme', t);
-  for (const b of document.querySelectorAll('#themeSeg button')) b.classList.toggle('on', b.dataset.t === t);
-}
 
 // ---------- review model ----------
 const own = (c) => c.round === undefined || c.round === doc.round;
@@ -732,15 +710,11 @@ document.addEventListener('keydown', (ev) => {
 });
 
 $('submit').addEventListener('click', submitReview);
-$('themeSeg').addEventListener('click', (ev) => {
-  const t = ev.target.closest('button');
-  if (t && t.dataset.t) setTheme(t.dataset.t);
-});
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') poll();
   else clearTimeout(timer);
 });
 
-setTheme(stored('iar.theme') || 'system', false);
+themeSwitch();
 render();
 poll();
