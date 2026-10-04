@@ -145,7 +145,7 @@ skills/read/iar/ui/             index.html, app.css, app.js, md.js, diff.js; van
 Outside the tree, per document: `$(git rev-parse --git-dir)/inspec-read/<slug>/<kind>/`:
 - `blocks.json`: `{doc, kind, lang, round, blocks:[{id, section, group, source, hash}]}`.
 - `display/<hash>.<lang>.json`: written by the session.
-  `{section, title, tldr, body, check, flag, covers}`:
+  `{section, title, tldr, body, check, flag, covers, diagram}`:
   - `section`: the `##` heading in `lang`.
   - `title`: the block's id token, then ` · ` and a short name in `lang`; without a token, the name alone.
   - `tldr`: one sentence.
@@ -293,15 +293,15 @@ Tests run serve with `--no-open` in a temporary git repository. The opener test 
   - Node missing or below 18 (S27).
 - Actors: another local process without the token (S6).
 - Load and limits: a one-block document (S1 with a minimal fixture inside prepare.test) and this spec's
-  40 blocks (S1, S15).
+  41 blocks (S1, S15).
 
 ## References
 
 - `mockup.html` is the agreed page, a copy of `references/prototype-focus.html`. It shows the topic list and
   focus card, flags, covers, comment kinds, the round-2 diff, the theme switch and the narrow layout. S24 is
   judged against it.
-- `references/demo-spec.html`: this spec as it would look in the tool, with Russian texts. S3, S12, S18
-  and "Session flow" show the rewritten body and the four diagram types; the other blocks are early drafts.
+- `references/demo-spec.html`: this spec as it would look in the tool: every block's display written in
+  Russian by the rules of State, with diagrams of all four types where they help.
 - `references/prototype-v1-three-layouts.html`: rejected layouts, context only.
 
 ## Not in scope

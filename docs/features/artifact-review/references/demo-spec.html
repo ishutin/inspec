@@ -199,136 +199,148 @@ const R1 = [
 "id": "overview",
 "tag": "Обзор",
 "title": "О чём эта спека",
-"tldr": "/inspec:read открывает intent, spec или plan как локальную страницу коротких блоков — одобрить или прокомментировать — и возвращает вердикт в сессию.",
-"body": "<p>Бриф: <code>docs/features/artifact-review/intent.md</code>, результаты O1–O12.</p>",
+"tldr": "Команда /inspec:read открывает intent, spec или plan как локальную страницу из коротких блоков: каждый можно одобрить или прокомментировать, а итог уходит обратно в сессию.",
+"body": "<p>Это спека к брифу <code>docs/features/artifact-review/intent.md</code>; там описаны результаты O1–O13, на которые ссылаются строки контракта.</p>",
 "src": "`/inspec:read` opens an intent, spec or plan as a local web page of short blocks to approve or comment on, and\nreturns the verdict to the session. Intent: `docs/features/artifact-review/intent.md` (outcomes O1–O12)."
 },
 {
 "id": "S1",
 "tag": "Контракт · Prepare",
 "title": "S1 · Нарезка на блоки",
-"tldr": "prepare режет документ на блоки по правилам нарезки и печатает JSON по каждому блоку, которому нужен показ.",
-"body": "<p>На фикстурах id блоков по порядку:</p><ul><li>intent → <code>problem, who, O1…O12, headline-scenario, references, not-in-scope</code></li><li>plan → <code>D1, D2</code></li><li>spec → список из <code>tests/read/fixtures/spec.ids</code>, снятый с этой спеки как она закоммичена.</li></ul>",
+"tldr": "prepare режет документ на блоки по правилам нарезки и печатает по JSON-объекту на каждый блок, для которого ещё нет текста показа.",
+"body": "<p>Вызов: <code>prepare &lt;md&gt; --id &lt;slug&gt;/&lt;kind&gt; --lang &lt;tag&gt;</code>. Правила нарезки — в разделе «Архитектура → Правила нарезки».</p><p>На трёх фикстурах порядок id должен быть ровно таким:</p><ul><li><b>intent</b>: <code>problem, who, O1 … O12, headline-scenario, references, not-in-scope</code>;</li><li><b>plan</b>: <code>D1, D2</code>;</li><li><b>spec</b>: список из <code>tests/read/fixtures/spec.ids</code>, снятый с этой спеки в том виде, в каком она закоммичена.</li></ul>",
 "src": "## Contract\n- **S1** `prepare <md> --id <slug>/<kind> --lang <tag>` splits the document by the Split rules (Architecture)\n  and prints one JSON object per block it needs a display for. On the fixtures the block ids, in order, are:\n  intent → `problem, who, O1, O2, O3, O4, O5, O6, O7, O8, O9, O10, O11, O12, headline-scenario, references,\n  not-in-scope`; plan → `D1, D2`; spec → the list in `tests/read/fixtures/spec.ids`, taken from this file as\n  committed. — check: `node --test --test-timeout=30000 tests/read/prepare.test.mjs`",
-"check": "Юнит-тесты CLI: <code>node --test tests/read/prepare.test.mjs</code>"
+"check": "Тест CLI: <code>node --test tests/read/prepare.test.mjs</code>"
 },
 {
 "id": "S2",
 "tag": "Контракт · Prepare",
-"title": "S2 · Хеш блока",
-"tldr": "Хеш блока зависит только от его собственного текста.",
-"body": "<p>Два запуска prepare дают одинаковые хеши; правка одного блока меняет только его хеш; хвостовые пробелы и пустые строки не меняют ничего.</p>",
+"title": "S2 · Хеш зависит только от своего блока",
+"tldr": "Хеш блока считается только по его собственному исходному тексту.",
+"body": "<ul><li>Два запуска prepare на одном документе дают одинаковые хеши.</li><li>Правка одного блока меняет хеш только этого блока, остальные остаются прежними.</li><li>Пробелы в конце строк и пустые строки в конце блока хеш не меняют.</li></ul>",
 "src": "- **S2** A block's hash depends only on its own source: two prepares give the same hashes; editing one block\n  changes that block's hash and no other; trailing spaces and trailing blank lines change none. — check:\n  `node --test --test-timeout=30000 tests/read/prepare.test.mjs`",
-"check": "<code>node --test tests/read/prepare.test.mjs</code>"
+"check": "Тест CLI: <code>node --test tests/read/prepare.test.mjs</code>",
+"diagram": {
+"type": "compare",
+"caption": "Правка одного блока",
+"before": {
+"label": "До правки S3",
+"text": "у S3 хеш `a1b2…`, у S4 — `c3d4…`"
+},
+"after": {
+"label": "После правки S3",
+"text": "у S3 новый хеш, у S4 по-прежнему `c3d4…`"
+}
+}
 },
 {
 "id": "S3",
 "tag": "Контракт · Prepare",
-"title": "S3 · Кеш перевода",
-"tldr": "prepare просит показ только для блоков без готового перевода; второй прогон неизменённого документа печатает [].",
-"body": "<p>Страница показывает записанные тексты без изменений — абзац не переписывается заново от раунда к раунду.</p>",
+"title": "S3 · Текст показа пишется один раз",
+"tldr": "prepare просит текст показа только для блоков, у которых его ещё нет на нужном языке; после записи текстов повторный prepare печатает [].",
+"body": "<p>Печатаются ровно те блоки, для хеша которых нет записи показа на языке <code>--lang</code>. Когда записи написаны, повторный prepare неизменённого документа печатает <code>[]</code>, а страница показывает эти записи без единого изменения (O9).</p>",
 "src": "- **S3** prepare prints exactly the blocks whose hash has no display entry for `--lang`; once they are written, a\n  second prepare of the unchanged document prints `[]`, and the page shows those entries unchanged (O9). —\n  check: `node --test --test-timeout=30000 tests/read/prepare.test.mjs`",
-"check": "<code>node --test tests/read/prepare.test.mjs</code>",
+"check": "Тест CLI: <code>node --test tests/read/prepare.test.mjs</code>",
 "diagram": {
 "type": "compare",
-"caption": "Зачем кеш",
+"caption": "Зачем это нужно",
 "before": {
 "label": "Без кеша",
-"text": "Каждый раунд модель заново пишет текст — один и тот же блок звучит по-разному, приходится перечитывать"
+"text": "каждый раунд модель пишет текст заново — один и тот же блок звучит по-разному, приходится перечитывать"
 },
 "after": {
 "label": "С кешем по хешу",
-"text": "Пока исходник блока не менялся, его текст и схема те же байт в байт"
+"text": "пока исходник блока не менялся, его текст и схема те же байт в байт"
 }
 }
 },
 {
 "id": "S4",
 "tag": "Контракт · Prepare",
-"title": "S4 · Ошибки prepare",
-"tldr": "На плохом входе prepare выходит с кодом 2, пишет причину в stderr и ничего не создаёт.",
-"body": "<ul><li>файла нет;</li><li>в файле нет ни одного <code>##</code>;</li><li><code>--id</code> не вида <code>&lt;slug&gt;/&lt;intent|spec|plan&gt;</code>;</li><li>kind не совпадает с именем файла;</li><li>запуск вне git-репозитория.</li></ul>",
+"title": "S4 · Ошибки на входе prepare",
+"tldr": "На плохом входе prepare завершается с кодом 2, пишет причину в stderr и ничего не создаёт в папке состояния.",
+"body": "<p>Это касается пяти случаев:</p><ul><li>файла нет;</li><li>в файле нет ни одного раздела <code>##</code>;</li><li><code>--id</code> не вида <code>&lt;slug&gt;/&lt;intent|spec|plan&gt;</code>;</li><li>kind в <code>--id</code> не совпадает с именем файла;</li><li>запуск не из git-репозитория.</li></ul>",
 "src": "- **S4** prepare exits 2 with the reason on stderr and writes nothing to the state directory for: a missing\n  file; a file with no `##` section; an `--id` not shaped `<slug>/<intent|spec|plan>`; a kind that differs from\n  the file's base name; a working directory outside a git repository. — check:\n  `node --test --test-timeout=30000 tests/read/prepare.test.mjs`",
-"check": "<code>node --test tests/read/prepare.test.mjs</code>"
+"check": "Тест CLI: <code>node --test tests/read/prepare.test.mjs</code>"
 },
 {
 "id": "S5",
 "tag": "Контракт · Serve",
-"title": "S5 · Не хватает перевода",
-"tldr": "Если у какого-то блока нет записи показа, serve за 2 с выходит с кодом 2, перечисляет id и порт не открывает.",
-"body": "",
-"src": "- **S5** `serve --id …` with any block lacking a display entry exits 2 within 2 s, names every missing block id\n  on stderr, and opens no port. — check: `node --test --test-timeout=30000 tests/read/serve.test.mjs`",
+"title": "S5 · serve не стартует с неполными текстами",
+"tldr": "Если у блока нет записи показа или запись нарушает схему, serve за 2 секунды завершается с кодом 2, перечисляет такие блоки и порт не открывает.",
+"body": "<p>Нарушения схемы:</p><ul><li>нет обязательного поля;</li><li>неизвестный тип схемы;</li><li>в матрице у строки число ячеек не совпадает с числом колонок.</li></ul><p>В stderr попадают id <b>всех</b> таких блоков, а не только первого.</p>",
+"src": "- **S5** `serve --id …` with any block lacking a display entry, or with an entry that breaks the display schema\n  (a missing field, an unknown diagram type, a matrix row whose cells do not match its columns), exits 2\n  within 2 s, names every such block id on stderr, and opens no port. — check: `node --test --test-timeout=30000 tests/read/serve.test.mjs`",
 "check": "Тест CLI: <code>node --test tests/read/serve.test.mjs</code>"
 },
 {
 "id": "S6",
 "tag": "Контракт · Serve",
-"title": "S6 · Локальный сервер",
-"tldr": "serve слушает только 127.0.0.1 на свободном порту и печатает адрес с токеном первой строкой.",
-"body": "<p>Токен — 32 hex-символа; запрос без токена получает 404. Браузер открывается через <code>open</code> на macOS и <code>xdg-open</code> на Linux, если не передан <code>--no-open</code>; без них в PATH сервер всё равно работает.</p>",
+"title": "S6 · Локальный сервер и открытие браузера",
+"tldr": "serve слушает только 127.0.0.1 на свободном порту и первой строкой печатает адрес страницы с секретным токеном.",
+"body": "<ul><li>Первая строка stdout: <code>inspec-read: &lt;url&gt;</code>; в адресе токен из 32 hex-символов.</li><li>Любой запрос, в пути которого нет токена, получает 404.</li><li>Браузер открывается командой <code>open &lt;url&gt;</code> на macOS и <code>xdg-open &lt;url&gt;</code> на Linux, если не передан <code>--no-open</code>.</li><li>Если ни одной из этих команд нет в <code>PATH</code>, сервер всё равно работает.</li></ul>",
 "src": "- **S6** serve listens on 127.0.0.1 only, on a free port, and prints `inspec-read: <url>` as its first stdout\n  line, the url holding a token of 32 hex characters. A request whose path lacks the token gets 404. It runs\n  `open <url>` on darwin and `xdg-open <url>` on linux unless `--no-open`; with neither on `PATH` it still\n  serves. — check: `node --test --test-timeout=30000 tests/read/serve.test.mjs`",
-"check": "<code>node --test tests/read/serve.test.mjs</code>, с подменными open/xdg-open в PATH",
+"check": "Тест CLI, с подменными open и xdg-open в PATH: <code>node --test tests/read/serve.test.mjs</code>",
 "flag": "Длину токена (32 hex) и привязку только к 127.0.0.1 агент выбрал сам."
 },
 {
 "id": "S7",
 "tag": "Контракт · Serve",
-"title": "S7 · Всё одобрено",
-"tldr": "При отправке с одобренными блоками serve пишет result.json {\"result\":\"approved\"}, печатает его и выходит с 0.",
-"body": "<p>Выход — не позже 2 с после отправки.</p>",
+"title": "S7 · Отправка: всё одобрено",
+"tldr": "Когда страница отправляет ревью, где одобрены все блоки, serve пишет результат, печатает его и завершается с кодом 0.",
+"body": "<p>В <code>result.json</code> записывается <code>{\"result\":\"approved\",\"round\":N}</code>; тот же JSON — последней строкой stdout. Процесс завершается не позже чем через 2 секунды.</p>",
 "src": "- **S7** On a submit with every block approved, serve writes `result.json` as `{\"result\":\"approved\",\"round\":N}`,\n  prints the same JSON as its last stdout line and exits 0 within 2 s. — check:\n  `node --test --test-timeout=30000 tests/read/serve.test.mjs`",
-"check": "<code>node --test tests/read/serve.test.mjs</code>"
+"check": "Тест CLI: <code>node --test tests/read/serve.test.mjs</code>"
 },
 {
 "id": "S8",
 "tag": "Контракт · Serve",
-"title": "S8 · Есть замечания",
-"tldr": "При отправке с комментариями результат — changes_requested со списком одобренных и замечаниями по блокам.",
-"body": "<p>У каждого комментария <code>kind</code> — change, question или unclear; <code>quote</code> пустая строка для комментария ко всему блоку. В результат попадают только комментарии этого раунда.</p>",
+"title": "S8 · Отправка: есть замечания",
+"tldr": "Когда страница отправляет ревью с комментариями, результат — changes_requested со списком одобренных блоков и замечаниями по каждому блоку.",
+"body": "<p>Формат: <code>{\"result\":\"changes_requested\",\"round\":N,\"approved\":[id…],\"feedback\":[{\"block\",\"hash\",\"comments\":[{\"id\",\"quote\",\"kind\",\"text\"}]}]}</code>.</p><ul><li><code>kind</code> — <code>change</code>, <code>question</code> или <code>unclear</code>;</li><li><code>quote</code> — пустая строка, если комментарий ко всему блоку;</li><li>в результат попадают только комментарии текущего раунда.</li></ul><p>Результат так же пишется в файл и печатается, код выхода 0.</p>",
 "src": "- **S8** On a submit with comments the result is `{\"result\":\"changes_requested\",\"round\":N,\"approved\":[<ids>],\n  \"feedback\":[{\"block\":<id>,\"hash\":<hash>,\"comments\":[{\"id\",\"quote\",\"kind\",\"text\"}]}]}`, where `kind` is\n  `change`, `question` or `unclear`, `quote` is `\"\"` for a comment on the whole block, and only this round's\n  comments appear. It is printed and written the same way, exit 0. — check:\n  `node --test --test-timeout=30000 tests/read/serve.test.mjs`",
-"check": "<code>node --test tests/read/serve.test.mjs</code>"
+"check": "Тест CLI: <code>node --test tests/read/serve.test.mjs</code>"
 },
 {
 "id": "S9",
 "tag": "Контракт · Serve",
-"title": "S9 · Ранняя отправка",
-"tldr": "Отправка, пока есть непросмотренные или изменённые блоки, получает 409, и сервер продолжает работать.",
-"body": "<p>Обновление ревью с неизвестным id блока или типом комментария получает 400 и ничего не меняет.</p>",
+"title": "S9 · Отправка раньше времени и мусор на входе",
+"tldr": "Отправка, пока есть блоки «Not reviewed» или «Changed», получает 409, а сервер продолжает работать.",
+"body": "<p>Сохранение ревью, где упомянут неизвестный id блока или неизвестный тип комментария, получает 400 и ничего не меняет.</p>",
 "src": "- **S9** A submit while any block is \"Not reviewed\" or \"Changed\" gets 409 and serve keeps running; a review\n  update naming an unknown block id or comment kind gets 400 and changes nothing. — check:\n  `node --test --test-timeout=30000 tests/read/serve.test.mjs`",
-"check": "<code>node --test tests/read/serve.test.mjs</code>"
+"check": "Тест CLI: <code>node --test tests/read/serve.test.mjs</code>"
 },
 {
 "id": "S10",
 "tag": "Контракт · Serve",
 "title": "S10 · Ничего не теряется",
-"tldr": "Одобрения и комментарии переживают перезагрузку страницы, перезапуск serve и повторный prepare в том же раунде.",
-"body": "",
+"tldr": "Одобрения и комментарии со страницы остаются на месте после перезагрузки, перезапуска serve и повторного prepare — в пределах одного раунда.",
+"body": "<p>Три проверяемых случая: перезагрузка вкладки; перезапуск serve; повторный prepare неизменённого документа и затем serve (O10).</p>",
 "src": "- **S10** Approvals and comments made on the page are still there after a page reload, a serve restart, and a\n  prepare rerun of the unchanged document followed by serve, all in the same round (O10). — check:\n  `npx playwright test tests/read/ui.spec.mjs`",
 "check": "Браузерный тест: <code>npx playwright test tests/read/ui.spec.mjs</code>"
 },
 {
 "id": "S11",
 "tag": "Контракт · Serve",
-"title": "S11 · Отказ из чата",
+"title": "S11 · drop",
 "tldr": "drop стирает неотправленные статусы и комментарии текущего раунда.",
-"body": "<p>Следующий serve показывает раунд таким, каким его оставил prepare.</p>",
+"body": "<p>Вызов: <code>drop --id …</code>. После него следующий serve показывает раунд таким, каким его оставил prepare (O12) — это нужно, когда ты отвечаешь в чате вместо отправки ревью.</p>",
 "src": "- **S11** `drop --id …` discards the current round's unsent statuses and comments; the next serve shows the\n  round as prepare left it (O12). — check: `node --test --test-timeout=30000 tests/read/serve.test.mjs`",
-"check": "<code>node --test tests/read/serve.test.mjs</code>"
+"check": "Тест CLI: <code>node --test tests/read/serve.test.mjs</code>"
 },
 {
 "id": "S12",
 "tag": "Контракт · Следующий раунд",
 "title": "S12 · Старт следующего раунда",
-"tldr": "Когда агент поправил документ по твоим замечаниям, ревью открывается снова — и сразу видно, что перечитывать, а что уже согласовано.",
-"body": "<p>Новый раунд начинается после <b>любой</b> отправки — и с замечаниями, и после полного одобрения. Каждый блок получает стартовый статус по двум признакам: что ты сделал с ним в прошлом раунде и изменился ли его исходный текст (хеш).</p><p>Блок, которого раньше не было, приходит как «Not reviewed»; удалённый из документа исчезает. Если прошлый раунд закончился одобрением и правок не было, все блоки сразу «Approved in round K».</p>",
+"tldr": "После любой отправки prepare начинает новый раунд, и каждый блок сразу получает понятный статус — видно, что перечитывать, а что уже согласовано.",
+"body": "<p>Новый раунд начинается после <b>любой</b> отправки — и с замечаниями, и после полного одобрения. Стартовый статус блока зависит от двух вещей: что ты сделал с ним в прошлом раунде и изменился ли его хеш.</p><p>Блок, которого раньше не было, приходит как «Not reviewed»; удалённый из документа исчезает. Если прошлый раунд закончился одобрением и правок не было, все блоки сразу «Approved in round K».</p>",
 "src": "- **S12** prepare after any submitted round N starts round N+1. Each block starts as follows. If it was approved\n  and its hash is unchanged, it stays approved, labelled \"Approved in round K\". If it was approved and its hash\n  changed, it is \"Changed after approval\". If it had comments and its hash changed, it is \"Changed\". If it had\n  comments and its hash is unchanged, it is \"Not reviewed\", with those comments shown read-only. A new block is\n  \"Not reviewed\", and a removed block is gone. After an `approved` round with no edits, every block is\n  \"Approved in round K\". — check: `npx playwright test tests/read/ui.spec.mjs`",
-"check": "<code>npx playwright test tests/read/ui.spec.mjs</code>",
+"check": "Браузерный тест: <code>npx playwright test tests/read/ui.spec.mjs</code>",
 "diagram": {
 "type": "matrix",
 "caption": "Статус блока в новом раунде",
 "cols": [
-"Текст не изменился",
-"Текст изменился"
+"Хеш тот же",
+"Хеш изменился"
 ],
 "rows": [
 {
@@ -337,12 +349,12 @@ const R1 = [
 {
 "tag": "Approved in round K",
 "tone": "ok",
-"text": "Ничего делать не нужно"
+"text": "ничего делать не нужно"
 },
 {
 "tag": "Changed after approval",
 "tone": "changed",
-"text": "Одобрение снято — посмотри дифф"
+"text": "одобрение снято — посмотри дифф"
 }
 ]
 },
@@ -352,12 +364,12 @@ const R1 = [
 {
 "tag": "Not reviewed",
 "tone": "new",
-"text": "Твои замечания видны только для чтения, рядом ответ агента"
+"text": "замечания видны только для чтения"
 },
 {
 "tag": "Changed",
 "tone": "changed",
-"text": "Посмотри дифф: учтено ли замечание"
+"text": "посмотри дифф: учтено ли замечание"
 }
 ]
 }
@@ -368,63 +380,63 @@ const R1 = [
 "id": "S13",
 "tag": "Контракт · Следующий раунд",
 "title": "S13 · Дифф изменённого блока",
-"tldr": "Изменённый блок показывает сводку, текст и проверку пословным диффом против версии на момент последней отправки.",
-"body": "<p>Вставленные и удалённые слова отмечены; заголовок показывает только новый текст.</p>",
-"src": "- **S13** A changed block shows its summary, body and check as a word diff against its display at the last\n  submit, with inserted and deleted words marked; its title shows the new text only. — check:\n  `npx playwright test tests/read/ui.spec.mjs`",
-"check": "<code>npx playwright test tests/read/ui.spec.mjs</code>"
+"tldr": "У изменённого блока сводка, текст и проверка показаны пословным диффом против версии на момент последней отправки.",
+"body": "<p>Вставленные и удалённые слова отмечены. Заголовок и схема показываются только в новой версии, без диффа.</p>",
+"src": "- **S13** A changed block shows its summary, body and check as a word diff against its display at the last\n  submit, with inserted and deleted words marked; its title and diagram show the new version only. — check:\n  `npx playwright test tests/read/ui.spec.mjs`",
+"check": "Браузерный тест: <code>npx playwright test tests/read/ui.spec.mjs</code>"
 },
 {
 "id": "S14",
 "tag": "Контракт · Следующий раунд",
-"title": "S14 · Ответы агента",
-"tldr": "Ответы из replies.json показываются под своим вопросом с подписью «Agent» в следующем раунде.",
-"body": "<p>prepare удаляет файл, как только прочитал его.</p>",
+"title": "S14 · Ответы агента на вопросы",
+"tldr": "Ответы, которые сессия положила в replies.json, видны под своими вопросами в следующем раунде с подписью «Agent».",
+"body": "<p>Формат файла: <code>{\"&lt;id комментария&gt;\":\"&lt;текст&gt;\"}</code>. prepare удаляет файл сразу после чтения.</p>",
 "src": "- **S14** Each entry of `<state>/replies.json` (`{\"<comment id>\":\"<text>\"}`) shows under that comment, labelled\n  \"Agent\", in the next round; prepare deletes the file once read. — check:\n  `npx playwright test tests/read/ui.spec.mjs`",
-"check": "<code>npx playwright test tests/read/ui.spec.mjs</code>"
+"check": "Браузерный тест: <code>npx playwright test tests/read/ui.spec.mjs</code>"
 },
 {
 "id": "S15",
 "tag": "Контракт · Страница",
-"title": "S15 · Список тем и карточка",
-"tldr": "Слева все блоки по разделам со статусом и ⚑, справа один блок в фокусе со всеми полями.",
-"body": "<p>Цвет точки свой для каждого из четырёх статусов. Пустое поле не показывается. Навигация: клик по теме, ↑/↓ и j/k; <b>A</b> одобряет и переходит к следующему неодобренному, повторное <b>A</b> снимает одобрение; <b>C</b> — комментарий к блоку. Фикстура спеки из S1 рендерит все блоки.</p>",
-"src": "- **S15** The topic list shows every block, grouped under its section name, each with its title, a status dot\n  whose colour differs for each of \"Not reviewed\", \"Approved\", \"Has comments\" and \"Changed\", and ⚑ when the\n  block has a flag. The focused block shows its section, \"n of N\", title, summary, flag, body, check, \"Covers\n  intent\" with outcome ids and texts, and comments; a field that is empty is not shown. Clicking a topic focuses\n  it; ↑/↓ and j/k move; A approves and moves to the next block that is not approved; A on an approved block\n  makes it \"Not reviewed\"; C opens a comment on the block. The spec fixture of S1 renders every block. — check:\n  `npx playwright test tests/read/ui.spec.mjs`",
-"check": "<code>npx playwright test tests/read/ui.spec.mjs</code>"
+"title": "S15 · Список тем и карточка блока",
+"tldr": "Слева — все блоки по разделам со статусом и ⚑, справа — один блок в фокусе со всеми его полями.",
+"body": "<p><b>Список тем.</b> Каждый блок под названием своего раздела: заголовок, точка статуса (у «Not reviewed», «Approved», «Has comments» и «Changed» — разные цвета) и ⚑, если у блока есть флаг.</p><p><b>Карточка.</b> Раздел, «n of N», заголовок, сводка, флаг, текст, проверка, «Covers intent» с номерами и текстами результатов, схема и комментарии. Пустые поля не показываются.</p><p><b>Управление.</b></p><ul><li>клик по теме — фокус на ней;</li><li>↑/↓ и j/k — перемещение;</li><li>Enter вне поля комментария — одобрить и перейти к следующему неодобренному; на уже одобренном — вернуть в «Not reviewed»;</li><li>C — комментарий ко всему блоку.</li></ul><p>Фикстура спеки из S1 рендерит все свои блоки.</p>",
+"src": "- **S15** The topic list shows every block, grouped under its section name, each with its title, a status dot\n  whose colour differs for each of \"Not reviewed\", \"Approved\", \"Has comments\" and \"Changed\", and ⚑ when the\n  block has a flag. The focused block shows its section, \"n of N\", title, summary, flag, body, check, \"Covers\n  intent\" with outcome ids and texts, the diagram, and comments; a field that is empty is not shown. Clicking a\n  topic focuses it; ↑/↓ and j/k move; Enter outside the comment box approves and moves to the next block that\n  is not approved, and on an approved block makes it \"Not reviewed\"; C opens a comment on the block. The spec fixture of S1 renders every block. — check:\n  `npx playwright test tests/read/ui.spec.mjs`",
+"check": "Браузерный тест: <code>npx playwright test tests/read/ui.spec.mjs</code>"
 },
 {
 "id": "S16",
 "tag": "Контракт · Страница",
 "title": "S16 · Комментарий по выделению",
-"tldr": "Выделили текст — появляется «Comment»; сохранили с типом — цитата подсвечена, блок «Has comments».",
-"body": "<p>Approve на блоке с комментариями этого раунда спрашивает «Delete N comments and approve?»: «да» удаляет и одобряет, «нет» ничего не меняет. Комментарии и ответы прошлых раундов остаются.</p>",
+"tldr": "Выделил текст — появляется «Comment»; сохранил с типом — цитата подсвечена, блок получает статус «Has comments».",
+"body": "<p>Тип комментария — change, question или unclear; выделенный текст сохраняется как цитата.</p><p>Если одобрить блок, у которого есть комментарии этого раунда, страница спросит «Delete N comments and approve?»: «да» удаляет их и одобряет, «нет» ничего не меняет. Комментарии и ответы прошлых раундов при этом остаются.</p>",
 "src": "- **S16** Selecting text inside a block shows \"Comment\". Saving with a kind (change, question or unclear)\n  stores the selected text as the quote, highlights it, and marks the block \"Has comments\". Approve on a block\n  with this round's comments asks \"Delete N comments and approve?\". Yes deletes them and approves; No changes\n  nothing. Earlier rounds' comments and replies stay. — check: `npx playwright test tests/read/ui.spec.mjs`",
-"check": "<code>npx playwright test tests/read/ui.spec.mjs</code>"
+"check": "Браузерный тест: <code>npx playwright test tests/read/ui.spec.mjs</code>"
 },
 {
 "id": "S17",
 "tag": "Контракт · Страница",
-"title": "S17 · Оригинал",
+"title": "S17 · Оригинал блока",
 "tldr": "«Show source» показывает исходный markdown блока простым текстом.",
 "body": "",
 "src": "- **S17** \"Show source\" shows the block's original markdown as plain text. — check:\n  `npx playwright test tests/read/ui.spec.mjs`",
-"check": "<code>npx playwright test tests/read/ui.spec.mjs</code>"
+"check": "Браузерный тест: <code>npx playwright test tests/read/ui.spec.mjs</code>"
 },
 {
 "id": "S18",
 "tag": "Контракт · Страница",
 "title": "S18 · Кнопка отправки",
-"tldr": "Кнопка показывает, сколько осталось, сколько комментариев уйдёт, или «Approve document».",
-"body": "<p>После отправки страница говорит, что ревью ушло и следующий раунд откроется в новой вкладке. Если сервера уже нет, следующее действие показывает «This review is closed» и выключает управление.</p>",
+"tldr": "Кнопка всегда говорит, что будет: сколько осталось просмотреть, сколько комментариев уйдёт, или что документ одобрен.",
+"body": "<p>N в «Send N comments» — число комментариев текущего раунда. После отправки страница пишет, что ревью ушло и следующий раунд откроется в новой вкладке. Если сервера уже нет (завершился или был <code>drop</code>), ближайшее действие показывает «This review is closed» и выключает управление.</p>",
 "src": "- **S18** The submit button reads \"N to review\" and is disabled while N blocks are \"Not reviewed\" or \"Changed\".\n  It reads \"Send N comments\", N counting this round's comments, when none is pending and some have comments.\n  It reads \"Approve document\" when all are approved. After submitting, the page says the review was sent and\n  the next round opens in a new tab. When serve is gone (exited or dropped), the next action shows \"This review\n  is closed\" and disables the controls. — check: `npx playwright test tests/read/ui.spec.mjs`",
-"check": "<code>npx playwright test tests/read/ui.spec.mjs</code>",
+"check": "Браузерный тест: <code>npx playwright test tests/read/ui.spec.mjs</code>",
 "diagram": {
 "type": "states",
-"caption": "Кнопка отправки",
+"caption": "Надпись на кнопке",
 "transitions": [
 {
 "from": "N to review",
 "to": "Send N comments",
-"on": "все блоки просмотрены, есть замечания"
+"on": "непросмотренных нет, есть комментарии"
 },
 {
 "from": "N to review",
@@ -432,135 +444,217 @@ const R1 = [
 "on": "все блоки одобрены"
 },
 {
-"from": "отправлено",
+"from": "после отправки",
 "to": "This review is closed",
 "on": "сервер завершился или сделан drop"
 }
-]
+],
+"note": "Пока есть блоки «Not reviewed» или «Changed», кнопка выключена."
 }
 },
 {
 "id": "S19",
 "tag": "Контракт · Страница",
 "title": "S19 · Тема",
-"tldr": "System следует настройке ОС, Light и Dark её переопределяют; выбор переживает перезагрузку.",
-"body": "<p>Если хранилище бросает исключение, страница всё равно рисуется в System. Фон и текст различаются на светлом и тёмном снимке.</p>",
+"tldr": "System следует настройке ОС, Light и Dark её переопределяют, а выбор переживает перезагрузку.",
+"body": "<p>Если хранилище браузера бросает исключение, страница всё равно рисуется в режиме System. На светлом и тёмном снимках различаются цвет фона и цвет текста.</p>",
 "src": "- **S19** Theme: System follows `prefers-color-scheme`, Light and Dark override it, the choice survives a reload,\n  and with storage throwing the page still renders in System; the body background and text colours differ\n  between the light and dark captures. — check: `npx playwright test tests/read/ui.spec.mjs`",
-"check": "<code>npx playwright test tests/read/ui.spec.mjs</code>"
+"check": "Браузерный тест: <code>npx playwright test tests/read/ui.spec.mjs</code>"
 },
 {
 "id": "S20",
 "tag": "Контракт · Страница",
 "title": "S20 · Узкое окно",
-"tldr": "До 760 px список тем — одна горизонтальная строка не выше 56 px, без горизонтального скролла страницы.",
-"body": "<p>Текущая тема всегда в зоне видимости.</p>",
+"tldr": "При ширине 760 px и меньше список тем — одна горизонтальная строка высотой не больше 56 px, без горизонтального скролла страницы.",
+"body": "<p>Текущая тема всегда в зоне видимости этой строки.</p>",
 "src": "- **S20** At a viewport 760 px wide or less, the topic list is one horizontally scrolling row no taller than\n  56 px, the focused topic is inside the viewport, and the page has no horizontal scroll. — check:\n  `npx playwright test tests/read/ui.spec.mjs`",
-"check": "<code>npx playwright test tests/read/ui.spec.mjs</code>",
+"check": "Браузерный тест: <code>npx playwright test tests/read/ui.spec.mjs</code>",
 "flag": "Порог 760 px и высоту 56 px агент взял из прототипа сам."
 },
 {
 "id": "S21",
 "tag": "Контракт · Страница",
 "title": "S21 · Интерфейс на английском",
-"tldr": "При русском контенте ни один элемент вне [data-content] не содержит кириллицы.",
-"body": "<p><code>[data-content]</code> отмечает каждое поле показа (включая разделы и заголовки в списке тем), тексты комментариев и вид оригинала.</p>",
-"src": "- **S21** With Russian display text, no element outside `[data-content]` holds a Cyrillic character.\n  `[data-content]` marks each display field (section names and titles in the topic list included), each comment\n  text and each source view. The interface is English (O2). — check:\n  `npx playwright test tests/read/ui.spec.mjs`",
-"check": "<code>npx playwright test tests/read/ui.spec.mjs</code>"
+"tldr": "При русском содержимом ни один элемент вне [data-content] не содержит кириллицы.",
+"body": "<p><code>[data-content]</code> отмечает всё, что пришло из документа: каждое поле показа (включая названия разделов и заголовки в списке тем), каждую схему, текст каждого комментария и вид оригинала. Всё остальное — интерфейс, и он на английском (O2).</p>",
+"src": "- **S21** With Russian display text, no element outside `[data-content]` holds a Cyrillic character.\n  `[data-content]` marks each display field (section names and titles in the topic list included), each\n  diagram, each comment text and each source view. The interface is English (O2). — check:\n  `npx playwright test tests/read/ui.spec.mjs`",
+"check": "Браузерный тест: <code>npx playwright test tests/read/ui.spec.mjs</code>"
 },
 {
 "id": "S22",
 "tag": "Контракт · Страница",
 "title": "S22 · Markdown и безопасность",
-"tldr": "Абзацы, списки, жирный, курсив, код, таблицы и http(s)-ссылки рендерятся; сырой HTML и javascript:-ссылки — инертный текст.",
-"body": "",
+"tldr": "Текст показа рендерится как markdown, а любой сырой HTML и javascript:-ссылки остаются безвредным текстом.",
+"body": "<p>Рендерятся элементами: абзацы, списки <code>-</code> и <code>1.</code>, жирный, курсив, inline-код и блоки кода, таблицы с <code>|</code>, ссылки http(s).</p><p>Показываются как текст: сырой HTML, <code>&lt;script&gt;</code>, ссылки <code>javascript:</code>.</p>",
 "src": "- **S22** Display markdown renders paragraphs, `-` and `1.` lists, bold, italic, inline and fenced code, pipe\n  tables and http(s) links as elements; raw HTML, `<script>` and `javascript:` links render as inert text. —\n  check: `npx playwright test tests/read/ui.spec.mjs`",
-"check": "<code>npx playwright test tests/read/ui.spec.mjs</code>"
+"check": "Браузерный тест: <code>npx playwright test tests/read/ui.spec.mjs</code>"
 },
 {
 "id": "S23",
 "tag": "Контракт · Страница",
-"title": "S23 · Соответствие макету",
-"tldr": "Страница совпадает с mockup.html по раскладке, отступам и цвету.",
-"body": "<p>Светлая и тёмная тема, 1280×800 и 520×800, раунд 1 и раунд 2.</p>",
-"src": "- **S23** The page matches `mockup.html` in layout, spacing and colour in light and dark, at 1280×800 and\n  520×800, in round 1 and round 2. — qa",
-"check": "qa — смотрит человек по снимкам."
+"title": "S23 · Схемы",
+"tldr": "Каждый из четырёх типов схем рисуется элементами страницы со всеми своими текстами, а разметка внутри остаётся текстом.",
+"body": "<p>Типы: flow, matrix, states, compare. Обратные кавычки дают код, любая другая разметка не исполняется.</p><p>При ширине 760 px и меньше поток выстраивается вертикально, матрица — в одну колонку, и у страницы нет горизонтального скролла.</p>",
+"src": "- **S23** Each diagram type (flow, matrix, states, compare) renders as elements holding every text of its\n  entry, with backtick spans as code and any other markup as inert text. At 760 px or less, a flow stacks its\n  steps vertically, a matrix shows one column, and the page has no horizontal scroll. — check:\n  `npx playwright test tests/read/ui.spec.mjs`",
+"check": "Браузерный тест: <code>npx playwright test tests/read/ui.spec.mjs</code>"
 },
 {
 "id": "S24",
-"tag": "Контракт · Скиллы и документы",
-"title": "S24 · Предложение в скиллах",
-"tldr": "Фраза «Agree as is, edit in chat, or open the review with /inspec:read.» есть в brief, spec и plan, а README упоминает /inspec:read.",
-"body": "",
-"src": "- **S24** The sentence \"Agree as is, edit in chat, or open the review with /inspec:read.\" is in\n  `skills/brief/SKILL.md`, `skills/spec/SKILL.md` and `skills/plan/SKILL.md`, and `README.md` lists\n  `/inspec:read`. — check: `grep -qF 'or open the review with /inspec:read' skills/brief/SKILL.md && grep -qF 'or open the review with /inspec:read' skills/spec/SKILL.md && grep -qF 'or open the review with /inspec:read' skills/plan/SKILL.md && grep -qF '/inspec:read' README.md`",
-"check": "<code>grep -qF</code> по трём SKILL.md и README"
+"tag": "Контракт · Страница",
+"title": "S24 · Соответствие макету",
+"tldr": "Страница совпадает с mockup.html по раскладке, отступам и цвету.",
+"body": "<p>Проверяется в светлой и тёмной теме, при 1280×800 и 520×800, в раунде 1 и в раунде 2.</p>",
+"src": "- **S24** The page matches `mockup.html` in layout, spacing and colour in light and dark, at 1280×800 and\n  520×800, in round 1 and round 2. — qa",
+"check": "qa — смотрит человек по снимкам."
 },
 {
 "id": "S25",
 "tag": "Контракт · Скиллы и документы",
-"title": "S25 · Номера результатов",
-"tldr": "Бриф пишет результаты как - **O&lt;n&gt;**, а skills/read/SKILL.md существует с name: read.",
-"body": "<p>Нужно, чтобы строка спеки могла назвать результат, который покрывает.</p>",
-"src": "- **S25** `skills/brief/SKILL.md` says outcomes are written `- **O<n>** <text>`, and `skills/read/SKILL.md` exists\n  with `name: read`. — check: `grep -qF -- '- **O<n>**' skills/brief/SKILL.md && grep -qx 'name: read' skills/read/SKILL.md`",
-"check": "<code>grep</code> по brief и read SKILL.md"
+"title": "S25 · Предложение в скиллах",
+"tldr": "В brief, spec и plan есть одна и та же фраза с предложением открыть ревью, а README упоминает /inspec:read.",
+"body": "<p>Фраза: «Agree as is, edit in chat, or open the review with /inspec:read.» — в <code>skills/brief/SKILL.md</code>, <code>skills/spec/SKILL.md</code> и <code>skills/plan/SKILL.md</code>.</p>",
+"src": "- **S25** The sentence \"Agree as is, edit in chat, or open the review with /inspec:read.\" is in\n  `skills/brief/SKILL.md`, `skills/spec/SKILL.md` and `skills/plan/SKILL.md`, and `README.md` lists\n  `/inspec:read`. — check: `grep -qF 'or open the review with /inspec:read' skills/brief/SKILL.md && grep -qF 'or open the review with /inspec:read' skills/spec/SKILL.md && grep -qF 'or open the review with /inspec:read' skills/plan/SKILL.md && grep -qF '/inspec:read' README.md`",
+"check": "<code>grep -qF</code> по трём SKILL.md и README.md"
 },
 {
 "id": "S26",
 "tag": "Контракт · Скиллы и документы",
-"title": "S26 · Живой прогон",
-"tldr": "В сессии Claude Code основной сценарий проходит от предложения в конце спеки до перехода к /inspec:plan.",
-"body": "<p>Также: <code>/inspec:read &lt;slug&gt;</code> без kind открывает самый свежий документ; сообщение в чат при открытом ревью останавливает serve и запускает drop; без Node 18+ скилл говорит об этом и продолжает в чате.</p>",
-"src": "- **S26** In a Claude Code session the Headline scenario runs end to end. The offer comes before the spec's\n  commit, the page opens on its own, and the session waits with no time limit and wakes on submit. It edits, and\n  round 2 opens with S3 diffed and S4 answered; the second submit takes the session on to `/inspec:plan`. Also\n  check: `/inspec:read <slug>` with no kind opens the newest document; the operator writing in chat while the\n  page is open makes the session stop serve and run drop; with `node` missing or below 18 the skill says so and\n  continues in chat. — qa",
+"title": "S26 · Номера результатов и сам скилл",
+"tldr": "Бриф пишет результаты в виде - **O<n>** текст, а файл skills/read/SKILL.md существует с name: read.",
+"body": "<p>Номера нужны, чтобы строка спеки могла назвать результат брифа, который она покрывает.</p>",
+"src": "- **S26** `skills/brief/SKILL.md` says outcomes are written `- **O<n>** <text>`, and `skills/read/SKILL.md` exists\n  with `name: read`. — check: `grep -qF -- '- **O<n>**' skills/brief/SKILL.md && grep -qx 'name: read' skills/read/SKILL.md`",
+"check": "<code>grep</code> по <code>skills/brief/SKILL.md</code> и <code>skills/read/SKILL.md</code>"
+},
+{
+"id": "S27",
+"tag": "Контракт · Скиллы и документы",
+"title": "S27 · Живой прогон в Claude Code",
+"tldr": "В настоящей сессии основной сценарий проходит целиком: от предложения в конце спеки до перехода к /inspec:plan.",
+"body": "<p><b>Основной путь.</b> Предложение появляется до коммита спеки; страница открывается сама; сессия ждёт без ограничения по времени и просыпается на отправке; правит; во втором раунде S3 показан диффом, а на S4 есть ответ; вторая отправка ведёт к <code>/inspec:plan</code>.</p><p><b>Дополнительно проверить:</b></p><ul><li>тексты блоков — переписанный исходник для технаря: все факты, числа, имена и условия на месте, ничего не добавлено; схемы только там, где они помогают;</li><li><code>/inspec:read &lt;slug&gt;</code> без kind открывает самый свежий документ;</li><li>сообщение в чат при открытой странице — сессия останавливает serve и делает drop;</li><li>без <code>node</code> или с версией ниже 18 скилл говорит об этом и продолжает в чате.</li></ul>",
+"src": "- **S27** In a Claude Code session the Headline scenario runs end to end. The offer comes before the spec's\n  commit, the page opens on its own, and the session waits with no time limit and wakes on submit. It edits, and\n  round 2 opens with S3 diffed and S4 answered; the second submit takes the session on to `/inspec:plan`. Also\n  check: each block's text reads as the source rewritten for a technical reader, with every fact, number, name\n  and condition kept and nothing added, and diagrams appear only where they show the content better;\n  `/inspec:read <slug>` with no kind opens the newest document; the operator writing in chat while the\n  page is open makes the session stop serve and run drop; with `node` missing or below 18 the skill says so and\n  continues in chat. — qa",
 "check": "qa — живой прогон в сессии."
 },
 {
 "id": "architecture/files",
 "tag": "Архитектура",
 "title": "Файлы",
-"tldr": "Новый скилл skills/read/: CLI на Node без зависимостей и страница на чистом JS.",
-"body": "<ul><li><code>iar.mjs</code> — CLI: prepare | serve | drop, Node ≥ 18, только встроенные модули;</li><li><code>lib/parse.mjs</code> — нарезка и хеш; <code>lib/state.mjs</code> — состояние, раунды, перенос; <code>lib/server.mjs</code> — HTTP;</li><li><code>ui/</code> — index.html, app.css, app.js, md.js, diff.js без сборки.</li></ul>",
+"tldr": "Новый скилл skills/read/ едет вместе с плагином: CLI на Node без зависимостей и страница на чистом JS без сборки.",
+"body": "<p>Кеш плагина хранит дерево <code>skills/</code> как есть, поэтому всё лежит внутри скилла.</p>",
 "src": "## Architecture\n### Files\n\nNew skill `skills/read/`, shipped with the plugin (the plugin cache holds the `skills/` tree):\n\n```\nskills/read/SKILL.md            the session flow below\nskills/read/iar/iar.mjs         CLI: prepare | serve | drop; Node >= 18, built-ins only\nskills/read/iar/lib/parse.mjs   Split rules + hash\nskills/read/iar/lib/state.mjs   state dir, rounds, carry (S12), replies, drop\nskills/read/iar/lib/server.mjs  HTTP (S5-S9)\nskills/read/iar/ui/             index.html, app.css, app.js, md.js, diff.js; vanilla, no build step\n```",
-"flag": "Рантайм — Node ≥ 18 без npm-зависимостей: агент выбрал сам (Python и Bun тоже были)."
+"flag": "Рантайм — Node ≥ 18 без npm-зависимостей: агент выбрал сам (Python и Bun тоже были).",
+"diagram": {
+"type": "matrix",
+"caption": "Что где лежит в skills/read/",
+"cols": [
+"Что внутри"
+],
+"rows": [
+{
+"label": "SKILL.md",
+"cells": [
+{
+"text": "сценарий сессии (ниже)"
+}
+]
+},
+{
+"label": "iar/iar.mjs",
+"cells": [
+{
+"text": "CLI: `prepare` | `serve` | `drop`; Node ≥ 18, только встроенные модули"
+}
+]
+},
+{
+"label": "iar/lib/parse.mjs",
+"cells": [
+{
+"text": "правила нарезки и хеш"
+}
+]
+},
+{
+"label": "iar/lib/state.mjs",
+"cells": [
+{
+"text": "папка состояния, раунды, перенос статусов (S12), ответы, `drop`"
+}
+]
+},
+{
+"label": "iar/lib/server.mjs",
+"cells": [
+{
+"text": "HTTP (S5–S9)"
+}
+]
+},
+{
+"label": "iar/ui/",
+"cells": [
+{
+"text": "`index.html`, `app.css`, `app.js`, `md.js`, `diff.js`"
+}
+]
+}
+]
+}
 },
 {
 "id": "architecture/state",
 "tag": "Архитектура",
 "title": "Состояние",
-"tldr": "Всё рабочее лежит в .git/inspec-read/<slug>/<kind>/ — вне дерева, пользователь его не видит.",
-"body": "<ul><li><code>blocks.json</code> — блоки раунда;</li><li><code>display/&lt;hash&gt;.&lt;lang&gt;.json</code> — тексты показа от сессии: раздел, заголовок, сводка, тело, проверка, флаг, покрытие; кеш по хешу и есть гарантия O9;</li><li><code>review.json</code> — статусы и комментарии;</li><li><code>result.json</code>, <code>replies.json</code> — обмен с сессией.</li></ul><p>Флаг пишет только сессия, которая сама писала документ.</p>",
-"src": "### State\n\nOutside the tree, per document: `$(git rev-parse --git-dir)/inspec-read/<slug>/<kind>/`:\n- `blocks.json`: `{doc, kind, lang, round, blocks:[{id, section, group, source, hash}]}`.\n- `display/<hash>.<lang>.json`: written by the session.\n  `{section, title, tldr, body, check, flag, covers}`:\n  - `section`: the `##` heading in `lang`.\n  - `title`: the block's id token, then ` · ` and a short name in `lang`; without a token, the name alone.\n  - `tldr`: one sentence.\n  - `body`: markdown. It is the source verbatim, minus the id token and the check, when `lang` is the\n    document's language; otherwise its translation.\n  - `check`: for a contract row, one sentence on what proves it, with the command in inline code; otherwise\n    `null`.\n  - `flag`: a choice the session made without the operator, or `null`. It is always `null` in a session that\n    did not write the document.\n  - `covers`: `[{id, text}]` for a contract row, naming the intent outcomes the row serves; otherwise `[]`.\n\n  This cache is what makes O9 hold: prepare never asks twice for a hash.\n- `review.json`: `{round, blocks:{<id>:{status:\"new\"|\"ok\"|\"cm\"|\"chg\", hash, approvedRound, prevHash, wasApproved,\n  comments:[{id, quote, kind, text, reply, round}]}}}`. Comment ids are `c<round>-<n>`.\n- `result.json`: the last submit (S7, S8). `replies.json` is written by the session before prepare (S14).",
+"tldr": "Всё рабочее лежит в .git/inspec-read/<slug>/<kind>/ — вне дерева проекта, ты его не видишь.",
+"body": "<p>Путь: <code>$(git rev-parse --git-dir)/inspec-read/&lt;slug&gt;/&lt;kind&gt;/</code>.</p><ul><li><code>blocks.json</code> — документ, kind, язык, раунд и блоки: id, раздел, группа, исходник, хеш.</li><li><code>display/&lt;hash&gt;.&lt;lang&gt;.json</code> — текст показа, его пишет сессия. Поля:<ul><li><code>section</code> — заголовок раздела на языке показа;</li><li><code>title</code> — id блока, « · » и короткое название (без id — только название);</li><li><code>tldr</code> — одно предложение;</li><li><code>body</code> — исходник, переписанный для удобного чтения технарём: не упрощённый, все факты, числа, имена, условия, команды и пути на месте, ничего не добавлено; придуманные документом термины поясняются при первом упоминании;</li><li><code>check</code> — для строки контракта одно предложение о том, чем она доказывается, с командой;</li><li><code>flag</code> — решение, принятое сессией без оператора; в чужой сессии всегда <code>null</code>;</li><li><code>covers</code> — для строки контракта номера и тексты результатов брифа;</li><li><code>diagram</code> — <code>null</code> или одна схема типа flow, matrix, states или compare, только где картинка показывает лучше текста; она повторяет текст, а не заменяет его.</li></ul>Этот кеш и даёт O9: prepare никогда не просит текст для одного хеша дважды.</li><li><code>review.json</code> — статусы (<code>new</code>, <code>ok</code>, <code>cm</code>, <code>chg</code>) и комментарии по блокам; id комментариев — <code>c&lt;раунд&gt;-&lt;n&gt;</code>.</li><li><code>result.json</code> — последняя отправка; <code>replies.json</code> — ответы на вопросы от сессии перед prepare.</li></ul>",
+"src": "### State\n\nOutside the tree, per document: `$(git rev-parse --git-dir)/inspec-read/<slug>/<kind>/`:\n- `blocks.json`: `{doc, kind, lang, round, blocks:[{id, section, group, source, hash}]}`.\n- `display/<hash>.<lang>.json`: written by the session.\n  `{section, title, tldr, body, check, flag, covers}`:\n  - `section`: the `##` heading in `lang`.\n  - `title`: the block's id token, then ` · ` and a short name in `lang`; without a token, the name alone.\n  - `tldr`: one sentence.\n  - `body`: markdown in `lang`. It is the source rewritten for a technical person to read easily, not\n    simplified. Every fact, number, name, condition, command and path stays, and nothing is added. The id\n    token and the check move to their own fields. Order, lists, short paragraphs and plain sentences serve the\n    reader. Jargon the document coins is explained on first use.\n  - `check`: for a contract row, one sentence on what proves it, with the command in inline code; otherwise\n    `null`.\n  - `flag`: a choice the session made without the operator, or `null`. It is always `null` in a session that\n    did not write the document.\n  - `covers`: `[{id, text}]` for a contract row, naming the intent outcomes the row serves; otherwise `[]`.\n  - `diagram`: `null` or one typed object, set only where a picture shows the content better than text; it\n    repeats the body and never replaces it. Every text is plain, with backtick spans as code. Each has an\n    optional `caption` and `note`:\n    - `flow`: `{steps:[{label, text, actor?: \"you\"}], loop?}`;\n    - `matrix`: `{cols:[text], rows:[{label, cells:[{text, tag?, tone?: \"ok\"|\"changed\"|\"new\"|\"warn\"}]}]}`,\n      with one cell per column;\n    - `states`: `{transitions:[{from, to, on}]}`;\n    - `compare`: `{before:{label, text}, after:{label, text}}`.\n\n  This cache is what makes O9 hold: prepare never asks twice for a hash.\n- `review.json`: `{round, blocks:{<id>:{status:\"new\"|\"ok\"|\"cm\"|\"chg\", hash, approvedRound, prevHash, wasApproved,\n  comments:[{id, quote, kind, text, reply, round}]}}}`. Comment ids are `c<round>-<n>`.\n- `result.json`: the last submit (S7, S8). `replies.json` is written by the session before prepare (S14).",
 "flag": "Хранить состояние в .git/ агент решил сам."
 },
 {
 "id": "architecture/split-rules",
 "tag": "Архитектура",
 "title": "Правила нарезки",
-"tldr": "Блок — раздел ##, строка с id (- **S1**), подраздел ### или кусок прозы; детерминированно, без модели.",
-"body": "<ol><li>Текст до первого <code>##</code> — блок <code>overview</code>.</li><li>Раздел получает id из токена в заголовке (<code>## D1</code>) или slug.</li><li>Внутри раздела: строка с id — свой блок; <code>###</code> — блок <code>раздел/подраздел</code>; куски прозы — блоки с суффиксами <code>-2</code>, <code>-3</code>.</li><li>Одна строка с двоеточием между строками с id — подпись группы, а не блок.</li></ol><p>Хеш — sha256 текста блока без хвостовых пробелов, 12 hex.</p>",
+"tldr": "Блоки выделяются по структуре документа, без модели, поэтому при каждом запуске одинаково.",
+"body": "<p>Правила применяются после front matter и строки с <code>#</code>.</p><ol><li>Текст до первого <code>##</code>, если он не пустой, — блок <code>overview</code>.</li><li><code>##</code> открывает раздел. Его id — токен из заголовка (<code>## D1 — …</code>), иначе slug: строчные буквы, всё, что не буква и не цифра, — в <code>-</code>, кириллица сохраняется, повторы получают <code>-2</code>, <code>-3</code>.</li><li>Внутри раздела:<ul><li>пункт верхнего уровня вида <code>- **S1**</code> вместе со строками-продолжениями — блок с этим id;</li><li><code>###</code> до следующего <code>###</code> или <code>##</code> — блок <code>раздел/подраздел</code>;</li><li>прочий текст — блоки прозы: первый получает id раздела, следующие — <code>-2</code>, <code>-3</code>; пустые строки блоков не дают;</li><li>строка заголовка раздела входит в его первый блок;</li><li>в разделе с id-пунктами одна строка, кончающаяся двоеточием, — не блок, а подпись группы для пунктов после неё.</li></ul></li></ol><p>Регулярка токена ловит <code>- **S1** …</code> и <code>- **O1 Offered…**</code>, но не <code>- **Problem** — …</code> и не <code>- [ ] S1</code>.</p><p>Хеш — sha256 исходника без пробелов в конце строк и без пустых строк в конце, первые 12 hex-символов; название раздела в хеш не входит.</p>",
 "src": "### Split rules\n\n`parse.mjs`, applied after the front matter and the `#` line:\n1. Text before the first `##` is the block `overview`, if it is not blank.\n2. A `##` heading opens a section. Its id is the heading's id token, when it opens with one\n   (`^## ([A-Z][0-9]+)\\b`). Otherwise the id is its slug: lowercase, every run of characters that are not\n   letters or digits becomes `-`, Cyrillic is kept, and a repeat gets `-2`, `-3`.\n3. Inside a section:\n   - A top-level item matching `^- \\*\\*([A-Z][0-9]+)\\b`, with its indented continuation lines, is a block\n     whose id is the token.\n   - A `###` subsection, up to the next `###` or `##`, is the block `<section>/<sub-slug>`.\n   - Each run of other lines is a prose block. The first run takes the section's id, and later runs take\n     `-2`, `-3`.\n   - A run holding only blank lines is no block.\n   - A section's heading line belongs to its first block.\n   - In a section with id items, a prose run that is one line ending in `:` is no block: it is the group\n     label of the items after it (`group` in `blocks.json`), shown above them in the topic list.\n\nThe token regex matches `- **S1** <who observes…` (criteria.md) and `- **O1 Offered at the right moment.**`\n(this intent). It does not match `- **Problem** — the user's current experience` (brief SKILL.md) or\n`- [ ] S1` (the plan template).\n\nHash: sha256 of the block source with trailing spaces removed from each line and trailing blank lines removed,\nfirst 12 hex characters. `section` is not part of it.",
-"flag": "Правило «строка с двоеточием = подпись группы» агент добавил сам после пробной нарезки этой спеки."
+"flag": "Правило «строка с двоеточием — подпись группы» агент добавил сам после пробной нарезки этой спеки."
 },
 {
 "id": "architecture/rounds",
 "tag": "Архитектура",
 "title": "Раунды",
-"tldr": "prepare начинает новый раунд, если уже есть result.json, иначе пересобирает текущий, сохраняя статусы.",
-"body": "<p>Дифф — пословный (LCS) между показом на момент последней отправки и новым.</p>",
-"src": "### Rounds\n\nprepare starts round N+1 when `result.json` holds round N. Otherwise it rebuilds round N and keeps\n`review.json` entries whose hash is unchanged. Carry follows S12. `prevHash` is the hash at the last submit, and\n`diff.js` diffs `display/<prevHash>` against the new display word by word (LCS)."
+"tldr": "Если уже есть result.json, prepare начинает новый раунд; иначе пересобирает текущий и сохраняет статусы неизменённых блоков.",
+"body": "<p>Перенос статусов — по S12. <code>prevHash</code> — хеш на момент последней отправки; <code>diff.js</code> сравнивает старый и новый текст показа по словам (LCS).</p>",
+"src": "### Rounds\n\nprepare starts round N+1 when `result.json` holds round N. Otherwise it rebuilds round N and keeps\n`review.json` entries whose hash is unchanged. Carry follows S12. `prevHash` is the hash at the last submit, and\n`diff.js` diffs `display/<prevHash>` against the new display word by word (LCS).",
+"diagram": {
+"type": "states",
+"transitions": [
+{
+"from": "раунд N",
+"to": "раунд N",
+"on": "prepare без отправки — пересборка, статусы сохраняются"
+},
+{
+"from": "раунд N",
+"to": "раунд N+1",
+"on": "prepare после отправки (есть result.json)"
+}
+]
+}
 },
 {
 "id": "architecture/http",
 "tag": "Архитектура",
 "title": "HTTP",
-"tldr": "Четыре маршрута под /<token>/: страница, документ, сохранение ревью, отправка.",
-"body": "<ul><li><code>GET /</code> — страница;</li><li><code>GET api/doc</code> — блоки с показом и прошлым показом, ревью;</li><li><code>PUT api/review</code> — всё ревью целиком, 400 на неизвестное, иначе 204;</li><li><code>POST api/submit</code> — 409, пока есть незавершённые, иначе 200 и выход.</li></ul>",
+"tldr": "Четыре маршрута под /<token>/: страница, данные документа, сохранение ревью и отправка.",
+"body": "<ul><li><code>GET /</code> — страница и её файлы;</li><li><code>GET api/doc</code> — документ, kind, язык, раунд, блоки с текущим и прошлым текстом показа, ревью;</li><li><code>PUT api/review</code> — страница присылает всё ревью при каждом изменении; 400 на неизвестный id или тип, иначе 204;</li><li><code>POST api/submit</code> — 409, пока есть незавершённые блоки, иначе 200; затем serve пишет и печатает результат и завершается.</li></ul><p>Браузер открывается через <code>open</code> на macOS и <code>xdg-open</code> на Linux; если не вышло — serve просто печатает адрес.</p>",
 "src": "### HTTP\n\n`server.mjs`, all routes under `/<token>/`:\n- `GET /`: the page and its assets.\n- `GET api/doc`: `{doc, kind, lang, round, blocks:[{id, section, source, hash, display, prevDisplay}], review}`.\n- `PUT api/review`: the page sends the whole review on each change. Returns 400 on an unknown id or kind,\n  else 204.\n- `POST api/submit`: returns 409 while blocks are pending, else 200. serve then writes and prints the result\n  and exits.\n\nThe opener is `open` on darwin and `xdg-open` on linux. If the opener fails, serve only prints the url."
 },
 {
 "id": "architecture/session-flow",
 "tag": "Архитектура",
 "title": "Сценарий сессии",
-"tldr": "Сессия готовит документ, открывает страницу и ждёт тебя без ограничения по времени; после отправки — правит и запускает следующий раунд.",
-"body": "<p>Запуск: <code>/inspec:read &lt;slug&gt; [intent|spec|plan]</code>; без kind берётся самый свежий документ — plan, иначе spec, иначе intent. Тот же сценарий запускается из brief, spec и plan, если ты выбрал ревью там.</p><ol><li>Нужен Node ≥ 18 — иначе сессия говорит об этом и продолжает в чате.</li><li>Язык показа — язык, на котором ты пишешь.</li><li>Документ берётся из рабочего дерева, иначе <code>git show feature/&lt;slug&gt;:…</code> во временный <code>&lt;kind&gt;.md</code>.</li><li><code>prepare</code>, затем запись показа для каждого напечатанного блока.</li><li><code>serve</code> в фоне (<code>run_in_background</code>) — сессия просыпается, когда он завершится.</li><li><code>approved</code> — документ согласован. <code>changes_requested</code> — правки через свой скилл (spec.md только через <code>/inspec:spec</code>), ответы на вопросы в <code>replies.json</code>, снова шаг 4.</li><li>Если ты пишешь в чат раньше отправки — сессия останавливает задачу, делает <code>drop</code> и действует по чату.</li></ol>",
+"tldr": "Сессия готовит документ, открывает страницу и ждёт тебя без ограничения по времени; после отправки правит и запускает следующий раунд.",
+"body": "<p>Запуск: <code>/inspec:read &lt;slug&gt; [intent|spec|plan]</code>; без kind берётся самый свежий документ — plan, иначе spec, иначе intent. Тот же сценарий запускается из brief, spec и plan, если ты выбрал ревью там.</p><ol><li>Нужен Node ≥ 18 — иначе сессия говорит об этом и продолжает в чате.</li><li>Язык показа — язык, на котором ты пишешь.</li><li>Документ берётся из рабочего дерева, иначе <code>git show feature/&lt;slug&gt;:docs/features/&lt;slug&gt;/&lt;kind&gt;.md</code> во временный <code>&lt;kind&gt;.md</code>.</li><li><code>node &lt;папка скилла&gt;/iar/iar.mjs prepare &lt;md&gt; --id &lt;slug&gt;/&lt;kind&gt; --lang &lt;lang&gt;</code>, затем запись показа для каждого напечатанного блока.</li><li><code>serve</code> в фоне (<code>run_in_background: true</code>) — сессия просыпается, когда он завершится.</li><li><code>approved</code> — документ согласован. <code>changes_requested</code> — правки через свой скилл (spec.md только через <code>/inspec:spec</code>), ответы на вопросы в <code>replies.json</code>, снова шаг 4.</li><li>Если ты пишешь в чат раньше отправки — сессия останавливает фоновую задачу, делает <code>drop</code> и действует по чату.</li></ol>",
 "src": "### Session flow\n\n`skills/read/SKILL.md` runs as `/inspec:read <slug> [intent|spec|plan]`; the default kind is the\nnewest that exists (plan, else spec, else intent). The flow is also followed from brief, spec and plan when the\noperator picks the review there.\n1. Check `node --version` ≥ 18; if not, say so and continue in chat.\n2. `lang` is the language the operator writes in.\n3. Pick the document: the working-tree file when it is there, else\n   `git show feature/<slug>:docs/features/<slug>/<kind>.md` into a temp file named `<kind>.md`.\n4. Run `node <skill dir>/iar/iar.mjs prepare <md> --id <slug>/<kind> --lang <lang>`. For every printed block,\n   write its display entry.\n5. Run `serve` with Bash `run_in_background: true`. The harness wakes the session when it exits.\n6. On `approved`, the document is agreed. On `changes_requested`, edit through the owning skill (spec.md only\n   through `/inspec:spec`), write `replies.json` for the questions, and go to 4.\n7. If the operator writes in chat first, stop the background task, run `drop`, and act on the chat.",
 "flag": "Без аргумента kind открывается самый свежий документ (plan, потом spec, потом intent) — агент решил сам.",
 "diagram": {
@@ -569,11 +663,11 @@ const R1 = [
 "steps": [
 {
 "label": "Сессия",
-"text": "prepare: блоки и хеши"
+"text": "`prepare`: блоки и хеши"
 },
 {
 "label": "Сессия",
-"text": "показ для новых хешей"
+"text": "текст показа для новых хешей"
 },
 {
 "label": "serve",
@@ -596,16 +690,16 @@ const R1 = [
 "id": "architecture/offer-placement",
 "tag": "Архитектура",
 "title": "Где появляется предложение",
-"tldr": "Brief — в конце §3; spec — §5 становится «доказать → предложить → done → коммит»; plan — перед коммитом.",
-"body": "<p>Бриф заодно переходит на формат <code>- **O&lt;n&gt;**</code>.</p>",
-"src": "### Offer placement\n\n- Brief: the offer is a new last step of §3, after \"Before committing, reread it\", and the outcome format\n  becomes `- **O<n>** <text>`.\n- Spec: §5 reorders to prove → offer → set `status: done` once agreed → commit.\n- Plan: the offer goes before \"Commit plan.md\".\n\nAll three carry the S24 sentence, written without backticks around `/inspec:read` so that S24's check can\nfind it."
+"tldr": "Ревью предлагается там, где оператор сейчас соглашается с документом: в конце brief, spec и plan перед коммитом.",
+"body": "<ul><li><b>Brief</b>: новый последний шаг §3, после «Before committing, reread it»; заодно результаты пишутся как <code>- **O&lt;n&gt;** текст</code>.</li><li><b>Spec</b>: §5 меняет порядок на «доказать → предложить → <code>status: done</code> после согласия → коммит».</li><li><b>Plan</b>: перед «Commit plan.md».</li></ul><p>Во всех трёх стоит фраза из S25, причём <code>/inspec:read</code> в ней без обратных кавычек — чтобы её нашла проверка S25.</p>",
+"src": "### Offer placement\n\n- Brief: the offer is a new last step of §3, after \"Before committing, reread it\", and the outcome format\n  becomes `- **O<n>** <text>`.\n- Spec: §5 reorders to prove → offer → set `status: done` once agreed → commit.\n- Plan: the offer goes before \"Commit plan.md\".\n\nAll three carry the S25 sentence, written without backticks around `/inspec:read` so that S25's check can\nfind it."
 },
 {
 "id": "architecture/dev-only",
 "tag": "Архитектура",
 "title": "Только для разработки",
-"tldr": "package.json с Playwright как dev-зависимостью, фикстуры — копии этого брифа и спеки.",
-"body": "<p>Тесты гоняют serve с <code>--no-open</code> во временном git-репозитории; тест открывашки подкладывает записывающие open/xdg-open в PATH.</p>",
+"tldr": "package.json с Playwright как dev-зависимостью и фикстуры из этого же брифа и спеки; пользователю плагина ничего из этого не нужно.",
+"body": "<ul><li>Корневой <code>package.json</code>: <code>private</code>, dev-зависимость <code>@playwright/test</code>, скрипт <code>test</code> запускает <code>node --test tests/read/</code> и <code>playwright test</code>.</li><li><code>playwright.config.mjs</code>.</li><li><code>tests/read/fixtures/</code>: копии <code>intent.md</code> и <code>spec.md</code> этой фичи в закоммиченном виде, <code>spec.ids</code> и <code>plan.md</code> с двумя поставками из шаблона плана.</li></ul><p>Тесты запускают serve с <code>--no-open</code> во временном git-репозитории; тест открытия браузера кладёт в начало <code>PATH</code> записывающие <code>open</code> и <code>xdg-open</code>.</p>",
 "src": "### Dev only\n\n- Root `package.json`: `private`, with devDependency `@playwright/test` and script `test` running\n  `node --test tests/read/` and `playwright test`.\n- `playwright.config.mjs`.\n- `tests/read/fixtures/`: copies of this feature's `intent.md` and `spec.md` as committed, `spec.ids`, and a\n  `plan.md` holding the plan template's two deliveries.\n\nTests run serve with `--no-open` in a temporary git repository. The opener test puts recording `open` and\n`xdg-open` scripts first on `PATH`.",
 "flag": "Playwright для UI-тестов агент выбрал сам; в рантайм плагина он не попадает."
 },
@@ -613,34 +707,110 @@ const R1 = [
 "id": "touches",
 "tag": "Затрагивает",
 "title": "Что ещё меняется",
-"tldr": "Скиллы brief, spec, plan; README; .gitignore; версия плагина 0.3.0.",
-"body": "<p>review тоже находится поиском, но ничего на согласование не пишет и остаётся как есть. Тестов и CI сейчас нет — единственный раннер будет <code>npm test</code>.</p>",
+"tldr": "Скиллы brief, spec и plan, README, .gitignore и версия плагина.",
+"body": "<ul><li>Поиск <code>grep -rlE 'operator agrees|Commit only intent|Commit plan.md' skills</code> находит brief, spec и plan — они получают предложение, — а также review: тот коммитит находки в plan.md, согласования там нет, и его текст не меняется. Build и start тоже не меняются.</li><li><code>grep -n '/inspec:' README.md</code> — в таблицу скиллов добавляется строка <code>/inspec:read</code>.</li><li>Тестов и CI сейчас нет (<code>ls tests .github</code>); единственный раннер — <code>npm test</code>, он покрывает все новые тесты. В <code>.gitignore</code> добавляются <code>node_modules/</code>, <code>test-results/</code>, <code>playwright-report/</code>.</li><li>Версия в <code>.claude-plugin/plugin.json</code> становится <code>0.3.0</code>.</li></ul>",
 "src": "## Touches\n\n- Skills that end in an agreement: `grep -rlE 'operator agrees|Commit only intent|Commit plan.md' skills`.\n  - Brief, spec and plan get the offer.\n  - Review also matches, because it commits findings to plan.md. No agreement is involved, so it keeps its text.\n  - Build and start keep theirs.\n- `grep -n '/inspec:' README.md`: the skills table gets the `/inspec:read` row.\n- Tests and CI: `ls tests .github`.\n  - Neither exists today.\n  - `npm test` is the only runner and covers every new test file.\n  - `.gitignore` gains `node_modules/`, `test-results/` and `playwright-report/`.\n- `.claude-plugin/plugin.json` `version`: becomes `0.3.0`."
 },
 {
 "id": "states",
 "tag": "Состояния",
 "title": "Состояния",
-"tldr": "Плохой ввод, все способы взаимодействия, перезапуски и раунды, тема и ширина, чужой процесс, 1 и 40 блоков.",
-"body": "<p>Каждое состояние привязано к строкам контракта — подробно в оригинале.</p>",
-"src": "## States\n\n- Input:\n  - missing file, no `##`, bad or mismatched `--id`, not a git repository (S4);\n  - missing display (S5);\n  - Cyrillic, raw HTML and `javascript:` links (S21, S22);\n  - a block added or removed between rounds (S12);\n  - a renamed `##` heading changes only its section's first block (S2, Split rules).\n- Interaction:\n  - approve, un-approve, approve with comments (S15, S16);\n  - comment by selection or on the whole block, in each of the three kinds (S16);\n  - keyboard and topic click (S15);\n  - submit while blocks are pending (S9, S18);\n  - act after serve is gone (S18).\n- Time:\n  - reload, serve restart and a prepare rerun (S10);\n  - round N+1, also after an approved round (S12–S14);\n  - a block changed twice since its approval, which diffs against the last submit (S13);\n  - the operator answering in chat mid-review (S11, S26);\n  - waiting with no time limit (S26).\n- Environment:\n  - light, dark, system, and storage throwing (S19);\n  - ≤ 760 px (S20);\n  - darwin and linux openers, and no opener (S6);\n  - Node missing or below 18 (S26).\n- Actors: another local process without the token (S6).\n- Load and limits: a one-block document (S1 with a minimal fixture inside prepare.test) and this spec's\n  ~45 blocks (S1, S15)."
+"tldr": "Каждый неочевидный случай привязан к строке контракта, которая его решает.",
+"body": "",
+"src": "## States\n\n- Input:\n  - missing file, no `##`, bad or mismatched `--id`, not a git repository (S4);\n  - missing display (S5);\n  - Cyrillic, raw HTML and `javascript:` links (S21, S22), including inside diagrams (S23);\n  - a display entry that breaks the schema (S5);\n  - a block added or removed between rounds (S12);\n  - a renamed `##` heading changes only its section's first block (S2, Split rules).\n- Interaction:\n  - approve, un-approve, approve with comments (S15, S16);\n  - comment by selection or on the whole block, in each of the three kinds (S16);\n  - keyboard (Enter inside and outside the comment box) and topic click (S15);\n  - submit while blocks are pending (S9, S18);\n  - act after serve is gone (S18).\n- Time:\n  - reload, serve restart and a prepare rerun (S10);\n  - round N+1, also after an approved round (S12–S14);\n  - a block changed twice since its approval, which diffs against the last submit (S13);\n  - the operator answering in chat mid-review (S11, S27);\n  - waiting with no time limit (S27).\n- Environment:\n  - light, dark, system, and storage throwing (S19);\n  - ≤ 760 px (S20, S23);\n  - darwin and linux openers, and no opener (S6);\n  - Node missing or below 18 (S27).\n- Actors: another local process without the token (S6).\n- Load and limits: a one-block document (S1 with a minimal fixture inside prepare.test) and this spec's\n  40 blocks (S1, S15).",
+"diagram": {
+"type": "matrix",
+"caption": "Какие случаи решают какие строки",
+"cols": [
+"Случаи",
+"Строки"
+],
+"rows": [
+{
+"label": "Ввод",
+"cells": [
+{
+"text": "нет файла, нет `##`, плохой или чужой `--id`, не git-репозиторий; нет текста показа или он нарушает схему; кириллица, сырой HTML, `javascript:` (и в схемах); блок добавлен или удалён; переименован `##`"
+},
+{
+"text": "S4, S5, S21–S23, S12, S2"
+}
+]
+},
+{
+"label": "Действия",
+"cells": [
+{
+"text": "одобрить, снять одобрение, одобрить с комментариями; комментарий по выделению и ко всему блоку, три типа; Enter в поле и вне его, клик по теме; отправка раньше времени; действие без сервера"
+},
+{
+"text": "S15, S16, S9, S18"
+}
+]
+},
+{
+"label": "Время",
+"cells": [
+{
+"text": "перезагрузка, перезапуск serve, повторный prepare; раунд N+1, в том числе после одобрения; блок, изменённый дважды после одобрения (дифф против последней отправки); ответ в чат посреди ревью; ожидание без лимита"
+},
+{
+"text": "S10, S12–S14, S13, S11, S27"
+}
+]
+},
+{
+"label": "Окружение",
+"cells": [
+{
+"text": "светлая, тёмная, системная тема, хранилище бросает исключение; ≤ 760 px; open, xdg-open или ничего; Node нет или ниже 18"
+},
+{
+"text": "S19, S20, S23, S6, S27"
+}
+]
+},
+{
+"label": "Другие",
+"cells": [
+{
+"text": "чужой локальный процесс без токена"
+},
+{
+"text": "S6"
+}
+]
+},
+{
+"label": "Объём",
+"cells": [
+{
+"text": "документ из одного блока и эта спека из 41 блока"
+},
+{
+"text": "S1, S15"
+}
+]
+}
+]
+}
 },
 {
 "id": "references",
 "tag": "Референсы",
 "title": "Референсы",
-"tldr": "mockup.html — согласованный вид; первый прототип с тремя раскладками — только для контекста.",
-"body": "",
-"src": "## References\n\n- `mockup.html` is the agreed page, a copy of `references/prototype-focus.html`. It shows the topic list and\n  focus card, flags, covers, comment kinds, the round-2 diff, the theme switch and the narrow layout. S23 is\n  judged against it.\n- `references/prototype-v1-three-layouts.html`: rejected layouts, context only."
+"tldr": "mockup.html — согласованный вид страницы; демо этой спеки и первый прототип — для контекста.",
+"body": "<ul><li><code>mockup.html</code> — копия <code>references/prototype-focus.html</code>: список тем и карточка, флаги, покрытие, типы комментариев, дифф второго раунда, тема, узкий экран. По нему проверяется S24.</li><li><code>references/demo-spec.html</code> — эта спека в инструменте с русскими текстами.</li><li><code>references/prototype-v1-three-layouts.html</code> — отвергнутые раскладки, только для контекста.</li></ul>",
+"src": "## References\n\n- `mockup.html` is the agreed page, a copy of `references/prototype-focus.html`. It shows the topic list and\n  focus card, flags, covers, comment kinds, the round-2 diff, the theme switch and the narrow layout. S24 is\n  judged against it.\n- `references/demo-spec.html`: this spec as it would look in the tool, with Russian texts. S3, S12, S18\n  and \"Session flow\" show the rewritten body and the four diagram types; the other blocks are early drafts.\n- `references/prototype-v1-three-layouts.html`: rejected layouts, context only."
 },
 {
 "id": "not-in-scope",
 "tag": "Не входит",
 "title": "Вне рамок",
-"tldr": "Дробление разделов глубже, флаги в чужой сессии, Windows, несколько ревьюеров, один сервер на все раунды.",
-"body": "",
+"tldr": "Пять вещей, которых в этой фиче сознательно нет.",
+"body": "<ul><li>Дробить раздел мельче, чем id-пункты, <code>###</code> и куски прозы.</li><li>Флаги решений агента в сессии, которая не писала документ.</li><li>Windows: браузер там не открывается, печатается адрес.</li><li>Несколько ревьюеров, общий доступ, хостинг.</li><li>Один сервер на все раунды: каждый раунд — новый serve и новая вкладка.</li></ul>",
 "src": "## Not in scope\n\n- Splitting a section further than its id items, `###` subsections and prose runs.\n- Agent's-decision flags in a session that did not write the document.\n- Windows: no opener is run there; the url is printed.\n- Several reviewers, sharing, remote hosting.\n- One server across rounds: each round is a new serve and a new tab.",
-"flag": "Windows вне рамок (там просто печатается адрес) — решение агента."
+"flag": "Windows вне рамок — решение агента."
 },
 {
 "id": "open",
@@ -652,8 +822,8 @@ const R1 = [
 }
 ];
 const R2_PATCH = {};
-const OUTCOMES={"O1": "Предложение в нужный момент", "O2": "Короткие блоки на языке оператора", "O3": "Видно, где ты", "O4": "Одобрение по блокам", "O5": "Точные комментарии", "O6": "Решения агента видны", "O7": "Связь с брифом", "O8": "Отправить и вернуться", "O9": "Тот же текст, если не правили", "O10": "Ничего не теряется", "O11": "Тема", "O12": "Ожидание"};
-const COVERS={"S1": ["O2"], "S2": ["O8", "O9"], "S3": ["O9"], "S6": ["O2"], "S7": ["O8"], "S8": ["O5", "O8"], "S9": ["O8"], "S10": ["O10"], "S11": ["O12"], "S12": ["O8"], "S13": ["O8"], "S14": ["O5"], "S15": ["O3", "O4", "O6", "O7"], "S16": ["O5"], "S17": ["O2"], "S18": ["O8", "O12"], "S19": ["O11"], "S20": ["O3"], "S21": ["O2"], "S22": ["O2"], "S23": ["O3", "O11"], "S24": ["O1"], "S25": ["O1", "O7"], "S26": ["O1", "O12"]};
+const OUTCOMES={"O1": "Предложение в нужный момент", "O2": "Короткие блоки, удобные для чтения", "O3": "Видно, где ты", "O4": "Одобрение по блокам", "O5": "Точные комментарии", "O6": "Решения агента видны", "O7": "Связь с брифом", "O8": "Отправить и вернуться", "O9": "Тот же текст, если не правили", "O10": "Ничего не теряется", "O11": "Тема", "O12": "Ожидание", "O13": "Схема, где помогает"};
+const COVERS={"S1": ["O2"], "S2": ["O8", "O9"], "S3": ["O9"], "S5": ["O13"], "S6": ["O2"], "S7": ["O8"], "S8": ["O5", "O8"], "S9": ["O8"], "S10": ["O10"], "S11": ["O12"], "S12": ["O8"], "S13": ["O8"], "S14": ["O5"], "S15": ["O3", "O4", "O6", "O7"], "S16": ["O5"], "S17": ["O2"], "S18": ["O8", "O12"], "S19": ["O11"], "S20": ["O3"], "S21": ["O2"], "S22": ["O2"], "S23": ["O13"], "S24": ["O3", "O11"], "S25": ["O1"], "S26": ["O1", "O7"], "S27": ["O1", "O2", "O12", "O13"]};
 
 /* ---------- state (resumable) ---------- */
 let round=1, blocks=JSON.parse(JSON.stringify(R1)), st={}, cur=0, showSrc=new Set();
