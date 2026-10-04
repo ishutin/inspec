@@ -121,7 +121,8 @@ Skills and docs:
   round 2 opens with S3 diffed and S4 answered; the second submit takes the session on to `/inspec:plan`. Also
   check: each block's text reads as the source rewritten for a technical reader, with every fact, number, name
   and condition kept and nothing added, and diagrams appear only where they show the content better;
-  `/inspec:read <slug>` with no kind opens the newest document; the operator writing in chat while the
+  `/inspec:read <slug>` with no kind opens the newest document; the display texts are written by one subagent
+  and are absent from the session's own context; the operator writing in chat while the
   page is open makes the session stop serve and run drop; with `node` missing or below 18 the skill says so and
   continues in chat. — qa
 
@@ -224,8 +225,12 @@ operator picks the review there.
 2. `lang` is the language the operator writes in.
 3. Pick the document: the working-tree file when it is there, else
    `git show feature/<slug>:docs/features/<slug>/<kind>.md` into a temp file named `<kind>.md`.
-4. Run `node <skill dir>/iar/iar.mjs prepare <md> --id <slug>/<kind> --lang <lang>`. For every printed block,
-   write its display entry.
+4. Run `node <skill dir>/iar/iar.mjs prepare <md> --id <slug>/<kind> --lang <lang>`. If it prints any block,
+   start one `general-purpose` subagent (no model override) with the printed blocks, `lang`, the intent's path,
+   the display rules of State, and the flags as a list of block id and text (only the session knows them). The
+   subagent writes every `display/<hash>.<lang>.json` and replies with the ids it wrote, so the texts stay out
+   of the session's context. If serve then refuses an entry (S5), the same subagent is asked again for those
+   ids only.
 5. Run `serve` with Bash `run_in_background: true`. The harness wakes the session when it exits.
 6. On `approved`, the document is agreed. On `changes_requested`, edit through the owning skill (spec.md only
    through `/inspec:spec`), write `replies.json` for the questions, and go to 4.
