@@ -63,7 +63,7 @@ builds on: D1
 - [x] S10
 - [x] S15
 - [x] S17
-- [ ] S18
+- [x] S18
 - [ ] S21
 - [ ] S22
 Notes: `ui/index.html`, `app.js` (topic list with groups, focus card, keyboard, approve, submit button states,
@@ -77,6 +77,7 @@ Log:
 - S15: `app.js` topic list (section headers from display.section, group labels from blocks.json, title, status dot, ⚑), focus card (section · n of N, badge, title, tldr, flag, body, meta line with check and covers ids whose title attribute holds the outcome text, comments, actions; empty fields left out), click, ↑/↓ and j/k (by key code, so any layout), Enter approves and jumps to the next not approved or un-approves to Not reviewed, also with focus on a button (default prevented), C opens a block comment box (kinds, Save/Cancel, Esc; Enter inside it is a newline); `app.css` is the mockup's tokens and components without the rejected layouts; test seen red on the placeholder page (0 topics), then green on all 42 fixture blocks
 - S10: the page keeps no review of its own: every change is PUT to the server at once and the page reads it back, so a reload, `stop` + `open` (same url) and a prepare rerun show the approvals (approvals only, as the notes say; D4 extends it to comments); test seen red on the placeholder
 - S17: Show source renders `blocks[].source` with `md.js` `block()`, the same function as the body; the test compares the view with md.js's own output for S1 and a fenced Architecture block, and checks heading, list, bold and code as elements; seen red on the placeholder
+- S18: submit reads "N to review" (disabled) / "Send N comments" (N = this round's comments; "comment" when N is 1, a wording choice) / "Approve document"; after a submit the card shows "Review sent. Waiting for the session…", controls off; polling every 3 s (1.5 s while unreachable, paused while hidden) adopts any changed payload, so a new round switches the tab in place (no reload); a failed fetch shows "Reconnecting…" with `/inspec:read <slug> <kind>`, disables approve, comment and submit, and clears on the next good poll. D2's note: the page re-reads after its own PUT (forgets the last payload) so a drop back to that payload still re-renders, and local edits are kept only while unsent; a page-level drop test (S11 page) checks both; seen red on the placeholder
 
 ## D4 — Comments, theme, narrow layout and diagrams
 status: todo
