@@ -242,6 +242,30 @@ export function badDisplays(dir) {
   return out;
 }
 
+// Every display entry of the round from one batch `{<block id | "summary">: entry}` (S40): each valid entry goes to
+// its cache path; an entry that breaks the schema or names no block of this round is refused and not written.
+export function put(dir, batch) {
+  const s = load(dir);
+  const byId = new Map(s.blocks.map((b) => [b.id, b]));
+  const written = [];
+  const refused = [];
+  for (const [id, d] of Object.entries(batch)) {
+    const b = byId.get(id);
+    const target = id === 'summary' ? s.summary && summaryPath(dir, s.summary.hash, s.lang) : b && displayPath(dir, b.hash, s.lang);
+    if (!target) {
+      refused.push({ id, reason: 'no block with this id in this round' });
+      continue;
+    }
+    const why = (id === 'summary' ? summaryProblem : displayProblem)(d);
+    if (why) refused.push({ id, reason: why });
+    else {
+      writeJSON(target, d);
+      written.push(id);
+    }
+  }
+  return { written, refused };
+}
+
 // The page's whole review for this round. Throws a message string for a 400.
 export function applyReview(dir, body) {
   const s = load(dir);

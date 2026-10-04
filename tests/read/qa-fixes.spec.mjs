@@ -108,7 +108,7 @@ const DIAGRAMS = {
   S4: { type: 'compare', before: { label: 'Before', text: NOSPACE }, after: { label: NOSPACE, text: LONG } },
 };
 
-test('S36 at 1280 and 520 no diagram is wider than its card and no flow step overlaps another', async ({ page }) => {
+test('S36 at 1280 and 520 no diagram is wider than its card, a wide flow scrolls inside it, no step overlaps another', async ({ page }) => {
   const d = setup('spec', (b) => ({ ...en(b), diagram: DIAGRAMS[b.id] || null }));
   for (const width of [1280, 520]) {
     await page.setViewportSize({ width, height: 800 });
@@ -119,7 +119,13 @@ test('S36 at 1280 and 520 no diagram is wider than its card and no flow step ove
       const m = await card(page).evaluate((c) => {
         const box = c.getBoundingClientRect();
         const out = [];
+        // Content inside a horizontal scroll box may sit past the card while scrolled out of view; the box may not.
+        const scrolled = (el) => {
+          for (let p = el.parentElement; p && p !== c; p = p.parentElement) if (['auto', 'scroll'].includes(getComputedStyle(p).overflowX)) return true;
+          return false;
+        };
         for (const el of c.querySelectorAll('.dia, .dia *')) {
+          if (scrolled(el)) continue;
           const r = el.getBoundingClientRect();
           if (r.width && (r.left < box.left - 0.5 || r.right > box.right + 0.5)) out.push(`${el.tagName}.${el.className} ${Math.round(r.left)}–${Math.round(r.right)} outside ${Math.round(box.left)}–${Math.round(box.right)}`);
           if (el.scrollWidth > el.clientWidth + 1 && getComputedStyle(el).overflowX === 'visible' && el.clientWidth) out.push(`${el.tagName}.${el.className} overflows its own box`);
@@ -131,10 +137,13 @@ test('S36 at 1280 and 520 no diagram is wider than its card and no flow step ove
             if (a.left < b.right - 0.5 && b.left < a.right - 0.5 && a.top < b.bottom - 0.5 && b.top < a.bottom - 0.5) overlaps.push(`${i}/${i + k + 1}`);
           }),
         );
-        return { out, overlaps, wide: document.documentElement.scrollWidth > document.documentElement.clientWidth };
+        // At full width no code span inside a flow step is broken across lines.
+        const broken = innerWidth > 760 ? [...c.querySelectorAll('.flow code')].filter((e) => e.getClientRects().length > 1).map((e) => e.textContent) : [];
+        return { out, overlaps, broken, wide: document.documentElement.scrollWidth > document.documentElement.clientWidth };
       });
       expect(m.out, `${id} at ${width}`).toEqual([]);
       expect(m.overlaps, `${id} at ${width}`).toEqual([]);
+      expect(m.broken, `${id} at ${width}`).toEqual([]);
       expect(m.wide, `${id} at ${width}`).toBe(false);
     }
   }
@@ -249,4 +258,56 @@ test('S38 a deleted word keeps a space on each side; a matrix cell\'s tone colou
     expect(new Set([ok, changed, fresh, warn, plain]).size, `${t}: ${bgs.join(' | ')}`).toBe(5);
     expect(tagged, t).toBe(ok);
   }
+});
+
+test('S42 a link to a local file or anchor shows its label, never raw markdown; other schemes stay inert', async ({ page }) => {
+  const body = 'Intent: [intent.md](intent.md), see [rows](#contract) and [bad](javascript:alert(1)).';
+  const d = setup('spec', (b) => ({ ...en(b), body: b.id === 'S1' ? body : en(b).body, tldr: b.id === 'S1' ? 'See [the plan](plan.md).' : en(b).tldr }));
+  await page.goto(d.url);
+  await topic(page, 'S1').click();
+  const c = card(page);
+  await expect(c.locator('.body')).toContainText('Intent: intent.md, see rows and');
+  await expect(c.locator('.body')).not.toContainText('](intent.md)');
+  await expect(c.locator('.body .local-link').first()).toHaveAttribute('title', 'intent.md');
+  await expect(c.locator('.body a')).toHaveCount(0);
+  await expect(c.locator('.body')).toContainText('[bad](javascript:alert(1))');
+  await expect(c.locator('.tldr')).toHaveText('See the plan.');
+});
+
+test('S42 a code span inside a link target never lands in an attribute', async ({ page }) => {
+  const body = 'A [x](`" onmouseover="window.__p=1`) and [y](https://e.com/`"x`).';
+  const d = setup('spec', (b) => ({ ...en(b), body: b.id === 'S1' ? body : en(b).body }));
+  await page.goto(d.url);
+  await topic(page, 'S1').click();
+  const c = card(page);
+  await expect(c.locator('.body .local-link, .body a')).toHaveCount(0);
+  await expect(c.locator('.body code')).toHaveCount(2);
+  await c.locator('.body code').first().hover();
+  expect(await page.evaluate(() => window.__p)).toBeUndefined();
+});
+
+test('S43 a long inline code span with no spaces wraps inside the card at 1280 and 520', async ({ page }) => {
+  const long = 'rg -n "' + Array.from({ length: 12 }, (_, i) => `SomeVeryLongSymbolName${i}`).join('|') + '" Source/eclipse';
+  const d = setup('spec', (b) => ({ ...en(b), body: b.id === 'S1' ? `Search: \`${long}\` finds it.` : en(b).body, tldr: b.id === 'S1' ? `Run \`${long}\`.` : en(b).tldr }));
+  for (const width of [1280, 520]) {
+    await page.setViewportSize({ width, height: 800 });
+    await page.goto(d.url);
+    await topic(page, 'S1').click();
+    const out = await card(page).evaluate((c) => {
+      const box = c.getBoundingClientRect();
+      return [...c.querySelectorAll('.tldr code, .body code')].flatMap((el) => [...el.getClientRects()]).filter((r) => r.right > box.right + 0.5 || r.left < box.left - 0.5).length;
+    });
+    expect(out, `code outside the card at ${width}`).toBe(0);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth)).toBe(false);
+  }
+});
+
+test('S42 local links inside list items show their labels too', async ({ page }) => {
+  const body = '- [intent.md](intent.md): outcomes.\n- [../combat-stance/spec.md](../combat-stance/spec.md): terms.';
+  const d = setup('spec', (b) => ({ ...en(b), body: b.id === 'S1' ? body : en(b).body }));
+  await page.goto(d.url);
+  await topic(page, 'S1').click();
+  const items = card(page).locator('.body li');
+  await expect(items).toHaveText(['intent.md: outcomes.', '../combat-stance/spec.md: terms.']);
+  await expect(card(page).locator('.body li .local-link').nth(1)).toHaveAttribute('title', '../combat-stance/spec.md');
 });

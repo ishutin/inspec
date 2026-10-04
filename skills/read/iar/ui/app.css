@@ -211,3 +211,15 @@ mark.cm.old{background:none;border-bottom-style:dashed}
 @media (max-width:520px){.docs .cell{padding:10px 10px}}
 /* a matrix cell's tone colours the cell, tag or not (S38) */
 .mx>div.t-ok{background:var(--ok-bg)}.mx>div.t-changed{background:var(--chg-bg)}.mx>div.t-new{background:var(--new-bg)}.mx>div.t-warn{background:var(--warn-bg)}
+/* Long content scrolls inside its box instead of being clipped or broken mid-word. */
+.meta{overflow-x:auto;scrollbar-width:thin}
+.meta>*{flex:0 0 auto;max-width:none}
+.meta code{white-space:nowrap}
+.flow{overflow-x:auto;padding-bottom:6px;scrollbar-width:thin}
+.flow li{flex:1 0 170px;min-width:170px}
+.flow code,.dia .flow code{white-space:nowrap;overflow-wrap:normal;word-break:normal}
+.local-link{border-bottom:1px dotted var(--muted);cursor:help}
+@media (max-width:760px){.flow{overflow-x:visible}.flow li{min-width:0;flex:none}.flow code,.dia .flow code{white-space:normal;overflow-wrap:anywhere}}
+
+/* Inline code in prose wraps anywhere when it has no space to break at (a long regex or path). */
+.tldr code,.body code,.src code,.cmt code,.flag code{overflow-wrap:anywhere;word-break:break-word}

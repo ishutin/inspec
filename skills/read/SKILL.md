@@ -39,8 +39,8 @@ wrote.
 node <skill dir>/iar/iar.mjs prepare <md> --id <slug>/<kind> --lang <lang>
 ```
 
-It prints a JSON list of the blocks that have no display yet, `[{id, section, group, hash, source, display}]`,
-`display` being the path to write; `[]` when every block has one (a display is written once per block text and
+It prints a JSON list of the blocks that have no display yet, `[{id, section, group, hash, source, display}]`
+(`display` is where `put` stores the entry); `[]` when every block has one (a display is written once per block text and
 reused). Its last entry may be the document summary, `{"id":"summary", hash, doc, display}`, with `display` a
 `display/summary.<hash>.<lang>.json` path and `doc` the document's path: it is asked for again whenever any block
 changes, since the page opens on it. Exit 2 is a usage error with the reason on stderr: fix the call, never retry blindly.
@@ -49,14 +49,21 @@ When it prints any block, start one `general-purpose` subagent with no model ove
 write display texts yourself: they stay out of this session's context. Pass it:
 
 - the printed blocks, verbatim (the summary entry included);
-- `lang`;
+- `lang`, and the `put` command with this document's `--id` and `<skill dir>` filled in;
 - the intent's path (`docs/features/<slug>/intent.md`, or the temp file shown from its branch), for `covers`;
 - the flags: one line per block holding a choice this session made without the operator, `<id>: <the choice>`.
   Only the session that wrote the document knows them; otherwise pass "none";
 - this brief, as is:
 
-> Write one display file per block below, at the block's `display` path, as JSON in `<lang>`:
-> `{section, group, title, tldr, body, check, flag, covers, diagram}`. All nine fields are required.
+> Write the display entries of every block below, in `<lang>`, into ONE JSON file with ONE write: an object
+> keyed by block id, `{"<id>": entry, …, "summary": summary entry}`, saved in the OS temp directory. Do not
+> write one file per block: each write is a turn, and the operator waits for all of them. Then run
+> `node <skill dir>/iar/iar.mjs put <that file> --id <slug>/<kind>` once. It stores each valid entry where
+> the page reads it and prints `{"written":[ids],"refused":[{id, reason}]}`, exiting 2 when anything is refused;
+> fix only the refused entries in a new batch file and `put` that, until nothing is refused.
+>
+> A block's entry is `{section, group, title, tldr, body, check, flag, covers, diagram}`; all nine fields are
+> required.
 >
 > - `section`: the block's `##` heading in `<lang>`.
 > - `group`: the block's `group` label in `<lang>` (the topic list shows it above the group's blocks), or `null`
@@ -89,14 +96,14 @@ write display texts yourself: they stay out of this session's context. Pass it:
 >   - `{"type":"states","transitions":[{"from","to","on"}]}`;
 >   - `{"type":"compare","before":{"label","text"},"after":{"label","text"}}`.
 >
-> The entry with id `summary`, when listed, is the document summary the page opens on: write its `display` path
-> (`display/summary.<hash>.<lang>.json`) as JSON in `<lang>`, `{tldr, body, diagram}`, from the whole document
+> The entry with id `summary`, when listed, is the document summary the page opens on: its entry is
+> `{tldr, body, diagram}` in `<lang>`, from the whole document
 > at its `doc` path, by the rules above. `tldr`: one sentence on what the document is for. `body`: markdown, its
 > main points and decisions and where it stops, at most 200 words; only what the document says, nothing added.
 > `diagram`: as above, `null` unless a picture shows the document better.
 >
-> Write only the files named; overwrite none other. Reply with the ids you wrote, one per line, and nothing
-> else.
+> Write no other file and no entry for an id not listed. Reply with the ids `put` wrote, one per line, and
+> nothing else.
 
 ## 4. Open and wait
 
@@ -105,7 +112,7 @@ node <skill dir>/iar/iar.mjs open --id <slug>/<kind>
 ```
 
 - Exit 2 lists every block whose display is missing or breaks the schema: send the same subagent (SendMessage)
-  those ids with their reasons, ask it to rewrite only them, and run `open` again.
+  those ids with their reasons, ask it to `put` only them again, and run `open` again.
 - Exit 0 prints `inspec-read: <url>` and opens the browser. Tell the operator the url in one line: the same
   link serves every round, and a tab left open follows by itself.
 - Then run `node <skill dir>/iar/iar.mjs wait --id <slug>/<kind>` with Bash `run_in_background: true`. It has

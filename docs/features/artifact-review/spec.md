@@ -142,7 +142,8 @@ Fixes from the live run:
 - **S35** Topic-list group labels are in the display language: a block's display entry carries `group` (the
   translated label of its group, or null), and the page shows that label, never the source's. — check: `npx playwright test tests/read/qa-fixes.spec.mjs`
 - **S36** At 1280×800 and 520×800, no diagram (the four types, with long `code` spans) is wider than its card,
-  and no step of a flow overlaps another. — check: `npx playwright test tests/read/qa-fixes.spec.mjs`
+  and no step of a flow overlaps another. A flow wider than the card scrolls horizontally inside it, and at full
+  width a code span in a flow step is never broken across lines; the check and covers line scrolls the same way. — check: `npx playwright test tests/read/qa-fixes.spec.mjs`
 - **S37** The document list at `/<token>/` uses the page's tokens and theme (system, light, dark), shows slug
   and kind as separate cells, and links each document. — check: `npx playwright test tests/read/qa-fixes.spec.mjs`
 - **S38** In a word diff, a deleted word keeps a space on each side of its neighbours, and a matrix cell's
@@ -150,6 +151,20 @@ Fixes from the live run:
 - **S39** `skills/read/SKILL.md` says a comment on the summary is a remark on the document as a whole: the
   session acts on it by editing the document through its owning skill or answers it in `replies.json`; it is
   never sent to the display subagent as a request to reword the summary. — check: `grep -qF 'never sent to the display' skills/read/SKILL.md`
+
+After release:
+
+- **S40** `put <batch.json> --id …` takes every display entry of a round in one JSON object keyed by block id
+  (`"summary"` for the summary), stores each valid one at its cache path and prints
+  `{"written":[ids],"refused":[{id, reason}]}`; an entry that breaks its schema or names no block of the round is
+  refused and not written, and `put` then exits 2; a file that is not a JSON object exits 2 and writes nothing.
+  — check: `node --test --test-timeout=30000 tests/read/put.test.mjs`
+- **S42** A link to a local file or anchor (`[intent.md](intent.md)`) shows its label as text, with the target on
+  hover, never as raw markdown; a link with another scheme stays inert text (S22). — check: `npx playwright test tests/read/qa-fixes.spec.mjs`
+- **S43** An inline code span with no space to break at (a long regex or path) wraps inside the card in the summary,
+  body, source, comments and flag, at 1280 and 520, with no horizontal page scroll. — check: `npx playwright test tests/read/qa-fixes.spec.mjs`
+- **S41** brief, spec and plan ask "Agree as is, edit in chat, or open the review with /inspec:read." in plain
+  text as the last line of the reply, not with a question tool. — check: `grep -qF 'not with a question tool' skills/brief/SKILL.md && grep -qF 'not with a question tool' skills/spec/SKILL.md && grep -qF 'not with a question tool' skills/plan/SKILL.md`
 
 Skills and docs:
 
@@ -284,7 +299,8 @@ operator picks the review there.
 4. Run `node <skill dir>/iar/iar.mjs prepare <md> --id <slug>/<kind> --lang <lang>`. If it prints any block,
    start one `general-purpose` subagent (no model override) with the printed blocks (and the summary entry), `lang`, the intent's path,
    the display rules of State, and the flags as a list of block id and text (only the session knows them). The
-   subagent writes every `display/<hash>.<lang>.json` and replies with the ids it wrote, so the texts stay out
+   subagent writes every entry into one batch file with one write and stores them with `put` (S40), replying
+   with the ids it wrote, so the texts stay out
    of the session's context. If `open` then refuses an entry (S5), the same subagent is asked again for those
    ids only.
 5. Run `open`, then `wait` with Bash `run_in_background: true`. The harness wakes the session when `wait`

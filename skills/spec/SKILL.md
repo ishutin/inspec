@@ -112,9 +112,11 @@ Run each command on the base (a clean checkout of the branch the change starts f
 red there by an assertion, a regression row green; a check whose test file does not exist yet is proven by the
 build. Rewrite the check or the row, never weaken it, until it holds.
 
-Then ask the operator: "Agree as is, edit in chat, or open the review with /inspec:read." Edit in chat and ask
-again; for the review, follow `/inspec:read <slug> spec` on the file as it is until it comes back approved,
-making each edit by this skill's rules. Set `status: done` once the operator agrees and nothing is Open.
+Then ask the operator in plain text, as the last line of your reply, not with a question tool:
+"Agree as is, edit in chat, or open the review with /inspec:read."
+Edit in chat and ask again; for the review, follow `/inspec:read <slug> spec` on the file as it is until it comes
+back approved, making each edit by this skill's rules. Set `status: done` once the operator agrees and nothing is
+Open.
 
 Commit spec.md, the mockup and the captures (`git add -f` what `.gitignore` drops) on `feature/<slug>`, never on
 the base and never with other changes. If the branch does not exist, `git switch -c feature/<slug>` from the
