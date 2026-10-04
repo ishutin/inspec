@@ -89,8 +89,21 @@ ${docs.length ? `<ul>\n${items}\n</ul>` : '<p>No documents prepared.</p>'}
 `;
 };
 
-const placeholder = (slug, kind) =>
-  `<!doctype html><meta charset="utf-8"><title>inspec-read</title><p>inspec-read: ${slug}/${kind}</p>\n`;
+// The page (skills/read/iar/ui/), served as is: it reads its slug and kind from its own url.
+const UI = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'ui');
+const ASSETS = { 'app.js': 'text/javascript', 'md.js': 'text/javascript', 'app.css': 'text/css' };
+// Display text is untrusted: no inline script, no other origin, and no token in a Referer.
+const PAGE_HEADERS = {
+  'content-security-policy':
+    "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+  'referrer-policy': 'no-referrer',
+  'x-content-type-options': 'nosniff',
+};
+
+function sendFile(res, file, type) {
+  res.writeHead(200, { 'content-type': `${type}; charset=utf-8`, 'cache-control': 'no-store', connection: 'close', ...PAGE_HEADERS });
+  res.end(fs.readFileSync(file));
+}
 
 export function handler(root, token, onStop, onRequest = () => {}) {
   return async (req, res) => {
@@ -110,13 +123,17 @@ export function handler(root, token, onStop, onRequest = () => {}) {
         return res.end(onStop);
       }
 
+      if (rest[0] === 'ui' && rest.length === 2 && Object.hasOwn(ASSETS, rest[1]) && m === 'GET') {
+        return sendFile(res, path.join(UI, rest[1]), ASSETS[rest[1]]);
+      }
+
       const api = rest[0] === 'api';
       const [slug, kind, action] = api ? rest.slice(1) : rest;
       if (!slug || !SLUG.test(slug) || !KINDS.includes(kind)) return send(res, 404, { error: 'not found' });
       const dir = docDir(root, slug, kind);
       if (!load(dir)) return send(res, 404, { error: `no review prepared for ${slug}/${kind}` });
 
-      if (!api && rest.length === 2 && m === 'GET') return send(res, 200, placeholder(slug, kind), 'text/html; charset=utf-8');
+      if (!api && rest.length === 2 && m === 'GET') return sendFile(res, path.join(UI, 'index.html'), 'text/html');
       if (api && rest.length === 4) {
         if (action === 'doc' && m === 'GET') return send(res, 200, docPayload(dir));
         if (action === 'review' && m === 'PUT') {

@@ -1,0 +1,471 @@
+// The review page: topic list, focus card, keyboard, approve, comment on a block, submit,
+// 3 s polling, round switch and Reconnecting… (spec S10, S15, S17, S18, S21).
+// Every display text goes through md.js and sits inside [data-content]; the chrome is English.
+import { esc, inline, block } from './md.js';
+
+const [token, slug, kind] = location.pathname.split('/').filter(Boolean).map(decodeURIComponent);
+const API = `/${encodeURIComponent(token)}/api/${encodeURIComponent(slug)}/${encodeURIComponent(kind)}`;
+const POLL_MS = 3000;
+const RETRY_MS = 1500;
+const KINDS = ['change', 'question', 'unclear'];
+const LABEL = { new: 'Not reviewed', ok: 'Approved', cm: 'Has comments', chg: 'Changed' };
+const PLACEHOLDER = { change: 'What should change?', question: 'Ask the agent; it answers, the document stays as is', unclear: 'What is hard to follow?' };
+
+const $ = (id) => document.getElementById(id);
+
+let doc = null; // the last payload adopted from the server
+let review = null; // the page's working copy of doc.review
+let seen = ''; // the last payload as received, to notice any change on the server (a drop, a prepare, a new round)
+let cur = 0;
+const showSrc = new Set();
+let online = true;
+let sent = false;
+let dirty = false; // local edits not yet sent
+let sending = null;
+let again = false;
+let pop = null;
+let timer = null;
+let toastTimer = null;
+let pushes = 0; // PUTs started: a poll that overlapped one reads again instead of taking a stale copy
+
+// ---------- theme (storage may throw: the page then stays in System) ----------
+function stored(k) {
+  try {
+    return localStorage.getItem(k);
+  } catch {
+    return null;
+  }
+}
+function store(k, v) {
+  try {
+    localStorage.setItem(k, v);
+  } catch {
+    // private mode or blocked storage: the choice lasts until reload
+  }
+}
+function setTheme(t, save = true) {
+  if (!['system', 'light', 'dark'].includes(t)) t = 'system';
+  if (t === 'system') delete document.documentElement.dataset.theme;
+  else document.documentElement.dataset.theme = t;
+  if (save) store('iar.theme', t);
+  for (const b of document.querySelectorAll('#themeSeg button')) b.classList.toggle('on', b.dataset.t === t);
+}
+
+// ---------- review model ----------
+const own = (c) => c.round === undefined || c.round === doc.round;
+const entry = (id) => (review.blocks[id] ||= { status: 'new', comments: [] });
+const mine = (e) => e.comments.filter(own);
+const canEdit = () => doc && online && !sent;
+const disp = (b) => b.display || { section: b.section, title: b.id, tldr: '', body: '', check: null, flag: null, covers: [], diagram: null };
+
+function nextOpen(i) {
+  const bs = doc.blocks;
+  for (let k = 1; k <= bs.length; k++) {
+    const j = (i + k) % bs.length;
+    if (entry(bs[j].id).status !== 'ok') return j;
+  }
+  return i;
+}
+
+function change() {
+  dirty = true;
+  render();
+  push();
+}
+
+function approve() {
+  if (!canEdit()) return;
+  const e = entry(doc.blocks[cur].id);
+  if (e.status === 'ok') e.status = 'new';
+  else {
+    const n = mine(e).length;
+    if (n && !window.confirm(`Delete ${n} comment${n === 1 ? '' : 's'} and approve?`)) return;
+    e.comments = e.comments.filter((c) => !own(c));
+    e.status = 'ok';
+    cur = nextOpen(cur);
+  }
+  closePop();
+  change();
+}
+
+function removeComment(k) {
+  if (!canEdit()) return;
+  const e = entry(doc.blocks[cur].id);
+  e.comments.splice(k, 1);
+  if (!mine(e).length && e.status === 'cm') e.status = 'new';
+  change();
+}
+
+// ---------- server ----------
+function body() {
+  const blocks = {};
+  for (const b of doc.blocks) {
+    const e = entry(b.id);
+    blocks[b.id] = { status: e.status, comments: mine(e).map(({ id, quote, kind: k, text }) => ({ id, quote, kind: k, text })) };
+  }
+  return JSON.stringify({ round: doc.round, blocks });
+}
+
+function push() {
+  if (sending) {
+    again = true;
+    return sending;
+  }
+  if (!dirty || !online || !doc) return Promise.resolve();
+  dirty = false;
+  pushes++;
+  sending = fetch(`${API}/review`, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: body() })
+    .then((r) => {
+      if (r.status === 400 || r.status === 409) {
+        // The server's state wins (another round, or a block that is gone): take it at the next poll.
+        seen = '';
+        r.json().then((j) => toast(j.error || 'The review changed on the server'), () => {});
+      } else if (!r.ok) throw new Error(String(r.status));
+      // The server now holds this page's review, not the one last read: a later drop back to that one must still show.
+      else seen = '';
+    })
+    .catch(() => {
+      dirty = true;
+      offline();
+    })
+    .finally(() => {
+      sending = null;
+      if (again) {
+        again = false;
+        push();
+      }
+    });
+  return sending;
+}
+
+async function flush() {
+  while (online && (sending || dirty)) await (sending || push());
+}
+
+function adopt(p, raw) {
+  const id = doc && doc.blocks[cur] && doc.blocks[cur].id;
+  const newRound = !doc || doc.round !== p.round;
+  doc = p;
+  seen = raw;
+  review = structuredClone(p.review || { round: p.round, blocks: {} });
+  sent = !!p.submitted;
+  if (newRound) {
+    dirty = false;
+    showSrc.clear();
+    closePop();
+    const i = p.blocks.findIndex((b) => entry(b.id).status !== 'ok');
+    cur = i < 0 ? 0 : i;
+  } else {
+    const i = p.blocks.findIndex((b) => b.id === id);
+    cur = i >= 0 ? i : Math.max(0, Math.min(cur, p.blocks.length - 1));
+  }
+}
+
+function offline() {
+  if (!online) return;
+  online = false;
+  closePop();
+  render();
+}
+
+async function poll() {
+  clearTimeout(timer);
+  const gen = pushes;
+  try {
+    const r = await fetch(`${API}/doc`, { cache: 'no-store' });
+    if (!r.ok) throw new Error(String(r.status));
+    const raw = await r.text();
+    const p = JSON.parse(raw);
+    const back = !online;
+    online = true;
+    const sameRound = doc && p.round === doc.round;
+    if (sameRound && (dirty || sending || gen !== pushes)) {
+      // Local edits go first; the server's copy is read again once they are sent.
+      if (!sending) push();
+      if (back) render();
+    } else if (raw !== seen && !(sameRound && pop)) {
+      adopt(p, raw);
+      render();
+    } else if (back) render();
+  } catch {
+    offline();
+  }
+  schedule();
+}
+
+function schedule() {
+  clearTimeout(timer);
+  if (document.visibilityState === 'visible') timer = setTimeout(poll, online ? POLL_MS : RETRY_MS);
+}
+
+async function submitReview() {
+  if (!canEdit()) return;
+  await flush();
+  if (!online) return;
+  let r;
+  try {
+    r = await fetch(`${API}/submit`, { method: 'POST' });
+  } catch {
+    return offline();
+  }
+  if (r.ok) {
+    sent = true;
+    render();
+    return;
+  }
+  const j = await r.json().catch(() => ({}));
+  toast(j.error || `Submit failed (${r.status})`);
+  seen = '';
+  poll();
+}
+
+// ---------- rendering ----------
+function badge(e) {
+  let t = LABEL[e.status] || LABEL.new;
+  if (e.status === 'ok' && e.approvedRound && e.approvedRound < doc.round) t = `Approved in round ${e.approvedRound}`;
+  if (e.status === 'chg' && e.wasApproved) t = 'Changed after approval';
+  return `<span class="st ${esc(e.status)}">${t}</span>`;
+}
+
+// Diagrams (S23) have their own renderer; until it is there, a block shows its text, which the diagram only repeats.
+const diagram = () => '';
+
+function toc() {
+  let section = null;
+  let group = null;
+  return doc.blocks
+    .map((b, i) => {
+      const d = disp(b);
+      let h = '';
+      if (d.section !== section) {
+        h += `<div class="tg" data-content>${inline(d.section)}</div>`;
+        section = d.section;
+        group = null;
+      }
+      if (b.group && b.group !== group) h += `<div class="tg2" data-content>${inline(b.group)}</div>`;
+      group = b.group;
+      return `${h}<a class="topic${i === cur ? ' cur' : ''}" data-id="${esc(b.id)}" data-i="${i}"><span class="dot ${esc(entry(b.id).status)}"></span><span class="tt" data-content>${inline(d.title)}</span>${d.flag ? '<span class="fl" title="Agent\'s decision">⚑</span>' : ''}</a>`;
+    })
+    .join('');
+}
+
+function comments(e) {
+  if (!e.comments.length) return '';
+  const items = e.comments.map((c, k) => {
+    const del = own(c) ? `<button class="x" data-act="del" data-k="${k}"${canEdit() ? '' : ' disabled'}>remove</button>` : '';
+    const quote = c.quote ? `<q data-content>${esc(c.quote)}</q>` : '';
+    const reply = c.reply ? `<div class="reply"><b>Agent</b> <span data-content>${esc(c.reply)}</span></div>` : '';
+    return `<div class="cmt${own(c) ? '' : ' old'}">${del}${quote}<span class="k">${esc(c.kind)}</span><span data-content>${esc(c.text)}</span>${reply}</div>`;
+  });
+  return `<div class="cmts">${items.join('')}</div>`;
+}
+
+function focusCard() {
+  const bs = doc.blocks;
+  const b = bs[cur];
+  const d = disp(b);
+  const e = entry(b.id);
+  const id = esc(b.id);
+  const covers = Array.isArray(d.covers) ? d.covers : [];
+  const meta =
+    d.check || covers.length
+      ? `<div class="meta">${d.check ? `<span class="ck" data-content data-sel="${id}">${inline(d.check)}</span>` : ''}${
+          covers.length ? `<span class="cv">covers ${covers.map((c) => `<b data-content title="${esc(c.text)}">${esc(c.id)}</b>`).join(' ')}</span>` : ''
+        }</div>`
+      : '';
+  const off = canEdit() ? '' : ' disabled';
+  const ok = e.status === 'ok';
+  const left = bs.filter((x) => entry(x.id).status !== 'ok').length;
+  return `<div class="stage">
+  ${sent ? '<div class="notice" id="notice"><b>Review sent.</b> Waiting for the session to read it; this tab switches to the next round when it is ready.</div>' : ''}
+  <div class="card" data-block="${id}">
+    <div class="hd"><span class="tag"><span data-content>${inline(d.section)}</span> · ${cur + 1} of ${bs.length}</span>${badge(e)}</div>
+    <h2 data-content>${inline(d.title)}</h2>
+    ${d.tldr ? `<div class="tldr" data-content data-sel="${id}">${inline(d.tldr)}</div>` : ''}
+    ${d.flag ? `<div class="flag"><span class="lab">⚑ Agent's decision</span><span data-content data-sel="${id}">${inline(d.flag)}</span></div>` : ''}
+    ${d.body ? `<div class="body" data-content data-sel="${id}">${block(d.body)}</div>` : ''}
+    ${diagram(d.diagram)}
+    ${meta}
+    ${showSrc.has(b.id) ? `<div class="src" data-content><span class="lab">Source</span><div class="md">${block(b.source)}</div></div>` : ''}
+    ${comments(e)}
+    <div class="actions">
+      <button class="btn ${ok ? 'ok' : 'primary'}" data-act="approve"${off}>${ok ? '✓ Approved' : 'Approve'} <span class="kbd">↵</span></button>
+      <button class="btn" data-act="comment"${off}>Comment on block <span class="kbd">C</span></button>
+      <button class="linkish" data-act="source">${showSrc.has(b.id) ? 'Hide source' : 'Show source'}</button>
+    </div>
+  </div>
+  <div class="nav"><span><span class="kbd">↑</span> <span class="kbd">↓</span> move · <span class="kbd">↵</span> approve · <span class="kbd">C</span> comment</span><span>${left} left</span></div>
+</div>`;
+}
+
+function header() {
+  const bs = doc.blocks;
+  const n = bs.length || 1;
+  const count = (s) => bs.filter((b) => entry(b.id).status === s).length;
+  const ok = count('ok');
+  const cm = count('cm');
+  const pending = count('new') + count('chg');
+  const notes = bs.reduce((a, b) => a + mine(entry(b.id)).length, 0);
+  $('docname').textContent = `${slug} · ${kind}.md`;
+  $('round').textContent = `Round ${doc.round}`;
+  $('barOk').style.width = `${(ok / n) * 100}%`;
+  $('barCm').style.width = `${(cm / n) * 100}%`;
+  $('ptext').textContent = `${ok}/${bs.length} approved${cm ? ` · ${cm} with comments` : ''}`;
+  const s = $('submit');
+  s.textContent = sent ? 'Sent' : pending ? `${pending} to review` : notes ? `Send ${notes} comment${notes === 1 ? '' : 's'}` : 'Approve document';
+  s.disabled = sent || !online || pending > 0;
+}
+
+function banner() {
+  const el = $('banner');
+  el.hidden = online;
+  if (!online) {
+    el.innerHTML = `<b>Reconnecting…</b><span>The review server does not answer. Run <code>/inspec:read ${esc(slug)} ${esc(kind)}</code> in the session to start it again.</span>`;
+  }
+}
+
+function render() {
+  document.title = `inspec review · ${slug} · ${kind}`;
+  banner();
+  if (!doc) {
+    $('submit').disabled = true;
+    return;
+  }
+  const list = document.querySelector('.F .toc');
+  const scroll = list ? list.scrollTop : 0;
+  $('app').innerHTML = doc.blocks.length ? `<div class="F"><nav class="toc">${toc()}</nav>${focusCard()}</div>` : '<p class="loading">This document has no blocks.</p>';
+  const nav = document.querySelector('.F .toc');
+  if (nav) {
+    nav.scrollTop = scroll;
+    const c = nav.querySelector('a.cur');
+    if (c) c.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }
+  header();
+}
+
+function toast(text) {
+  const el = $('toast');
+  el.textContent = text;
+  el.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => (el.hidden = true), 5000);
+}
+
+// ---------- comment box ----------
+function closePop() {
+  if (pop) pop.remove();
+  pop = null;
+}
+
+function openComment(quote = '') {
+  if (!canEdit()) return;
+  closePop();
+  const id = doc.blocks[cur].id;
+  const anchor = document.querySelector('.card [data-act="comment"]');
+  const r = anchor.getBoundingClientRect();
+  let k = 'change';
+  pop = document.createElement('div');
+  pop.className = 'pop';
+  pop.innerHTML = `${quote ? `<div class="pq" data-content>“${esc(quote)}”</div>` : ''}<div class="kinds">${KINDS.map((x) => `<button type="button" data-k="${x}" class="${x === k ? 'on' : ''}">${x}</button>`).join('')}</div><textarea data-content placeholder="${PLACEHOLDER[k]}"></textarea><div class="actions"><button type="button" class="btn primary" data-pop="save">Save</button><button type="button" class="btn" data-pop="cancel">Cancel</button></div>`;
+  pop.style.left = `${Math.max(8, Math.min(r.left + scrollX, scrollX + innerWidth - 310))}px`;
+  pop.style.top = `${r.bottom + scrollY + 6}px`;
+  document.body.append(pop);
+  const ta = pop.querySelector('textarea');
+  ta.focus();
+  pop.addEventListener('click', (ev) => {
+    const t = ev.target.closest('button');
+    if (!t) return;
+    if (t.dataset.k) {
+      k = t.dataset.k;
+      ta.placeholder = PLACEHOLDER[k];
+      for (const b of pop.querySelectorAll('.kinds button')) b.classList.toggle('on', b.dataset.k === k);
+      ta.focus();
+    } else if (t.dataset.pop === 'cancel') closePop();
+    else if (t.dataset.pop === 'save') save();
+  });
+  const save = () => {
+    const text = ta.value.trim();
+    if (!text || !canEdit()) return;
+    const e = entry(id);
+    e.comments.push({ quote, kind: k, text, round: doc.round });
+    e.status = 'cm';
+    closePop();
+    change();
+  };
+  pop.save = save;
+}
+
+// ---------- events ----------
+function move(step) {
+  if (!doc || !doc.blocks.length) return;
+  cur = Math.max(0, Math.min(doc.blocks.length - 1, cur + step));
+  closePop();
+  render();
+}
+
+document.addEventListener('click', (ev) => {
+  if (!doc) return;
+  const t = ev.target.closest('.F .toc a.topic, .card [data-act]');
+  if (!t) return;
+  if (t.matches('a.topic')) {
+    cur = Number(t.dataset.i);
+    closePop();
+    render();
+    return;
+  }
+  const act = t.dataset.act;
+  if (act === 'approve') approve();
+  else if (act === 'comment') openComment();
+  else if (act === 'source') {
+    const id = doc.blocks[cur].id;
+    if (showSrc.has(id)) showSrc.delete(id);
+    else showSrc.add(id);
+    render();
+  } else if (act === 'del') removeComment(Number(t.dataset.k));
+});
+
+document.addEventListener('mousedown', (ev) => {
+  if (pop && !pop.contains(ev.target) && !ev.target.closest('[data-act="comment"]')) closePop();
+});
+
+document.addEventListener('keydown', (ev) => {
+  if (!doc) return;
+  if (pop && pop.contains(ev.target)) {
+    if (ev.key === 'Escape') closePop();
+    else if (ev.key === 'Enter' && (ev.metaKey || ev.ctrlKey)) {
+      ev.preventDefault();
+      pop.save();
+    }
+    return;
+  }
+  if (ev.key === 'Escape' && pop) return closePop();
+  if (ev.metaKey || ev.ctrlKey || ev.altKey) return;
+  if (ev.target.closest && ev.target.closest('input, textarea, select, [contenteditable]')) return;
+  if (ev.key === 'ArrowDown' || ev.code === 'KeyJ') {
+    ev.preventDefault();
+    move(1);
+  } else if (ev.key === 'ArrowUp' || ev.code === 'KeyK') {
+    ev.preventDefault();
+    move(-1);
+  } else if (ev.key === 'Enter') {
+    ev.preventDefault();
+    approve();
+  } else if (ev.code === 'KeyC') {
+    ev.preventDefault();
+    openComment();
+  }
+});
+
+$('submit').addEventListener('click', submitReview);
+$('themeSeg').addEventListener('click', (ev) => {
+  const t = ev.target.closest('button');
+  if (t && t.dataset.t) setTheme(t.dataset.t);
+});
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') poll();
+  else clearTimeout(timer);
+});
+
+setTheme(stored('iar.theme') || 'system', false);
+render();
+poll();

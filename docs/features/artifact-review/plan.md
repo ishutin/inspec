@@ -61,7 +61,7 @@ Log:
 status: todo
 builds on: D1
 - [ ] S10
-- [ ] S15
+- [x] S15
 - [ ] S17
 - [ ] S18
 - [ ] S21
@@ -71,6 +71,10 @@ Notes: `ui/index.html`, `app.js` (topic list with groups, focus card, keyboard, 
 the base of `app.css` taken from `mockup.html`. Adds `@playwright/test`, `playwright.config.mjs` and
 `playwright test` to `npm test`. Comments, theme switch, narrow layout and diagrams come in D4; S10 here
 covers approvals only and D4's comment tests extend it. ~420 lines.
+Log:
+- started from accb66c (branch from feature/artifact-review-d2 at the operator's word, for one linear chain); S10, S15, S17, S18, S21, S22 red: tests/read/ui.spec.mjs and @playwright/test missing
+- dev setup: `@playwright/test` devDependency (package-lock.json), `playwright.config.mjs` (tests/read/*.spec.mjs, Chromium 1280×800, one worker: S10 stops a server and opens it on its stored port), `npm test` = node --test then `playwright test`; the server serves `ui/index.html` at `<slug>/<kind>` (it reads slug and kind from its url) and `ui/{app.js,md.js,app.css}` at `/<token>/ui/`, with a CSP (script-src self, no inline script), `referrer-policy: no-referrer` (no token in a Referer from a display link) and nosniff; the placeholder is gone
+- S15: `app.js` topic list (section headers from display.section, group labels from blocks.json, title, status dot, ⚑), focus card (section · n of N, badge, title, tldr, flag, body, meta line with check and covers ids whose title attribute holds the outcome text, comments, actions; empty fields left out), click, ↑/↓ and j/k (by key code, so any layout), Enter approves and jumps to the next not approved or un-approves to Not reviewed, also with focus on a button (default prevented), C opens a block comment box (kinds, Save/Cancel, Esc; Enter inside it is a newline); `app.css` is the mockup's tokens and components without the rejected layouts; test seen red on the placeholder page (0 topics), then green on all 42 fixture blocks
 
 ## D4 — Comments, theme, narrow layout and diagrams
 status: todo
