@@ -7,6 +7,7 @@ import { mkRepo, docPath, stateDir, iar, prepare, readJSON } from './helpers.mjs
 const row = (id) => /^S\d+$/.test(id);
 const blockDisplay = (b) => ({
   section: b.section,
+  group: b.group ?? null,
   title: row(b.id) || /^D\d+$/.test(b.id) ? `${b.id} · Row ${b.id}` : `Name of ${b.id}`,
   tldr: `Summary of ${b.id}.`,
   body: `Body of ${b.id}.`,

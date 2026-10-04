@@ -27,7 +27,7 @@ test('S29 prepare prints the summary entry while display/summary.<hash>.<lang>.j
   assert.equal(sum[0].hash, h, 'sha256 over the block hashes in order, 12 hex');
   assert.equal(sum[0].display, path.join(stateDir(repo, 'spec'), 'display', `summary.${h}.en.json`));
   assert.equal(blocksOf(repo).some((b) => b.id === 'summary'), false, 'not a block of blocks.json');
-  assert.equal(out.filter((e) => e.id !== 'summary').length, 47);
+  assert.equal(out.filter((e) => e.id !== 'summary').length, 53);
 
   // Written: a rerun prints nothing; another language asks for its own summary.
   writeDisplays(out);
@@ -77,6 +77,6 @@ test('S29 open refuses a missing or schema-breaking summary, naming summary', as
   assert.equal(r.code, 0, r.err);
   const api = /inspec-read: (\S+)/.exec(r.out)[1].replace('/demo/spec', '/api/demo/spec/doc');
   const doc = await (await fetch(api)).json();
-  assert.equal(doc.blocks.length, 47);
+  assert.equal(doc.blocks.length, 53);
   assert.deepEqual(doc.summary.display, readJSON(file));
 });

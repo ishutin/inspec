@@ -99,7 +99,7 @@ ins{background:var(--ins);text-decoration:none}
 .F .nav{display:flex;justify-content:space-between;margin-top:14px;color:var(--muted);font-size:13px}
 @media (max-width:760px){
   .F{grid-template-columns:1fr;grid-template-rows:auto 1fr;min-height:0}
-  .F .toc{position:sticky;top:0;z-index:5;height:auto;background:var(--bg);border-right:0;border-bottom:1px solid var(--line);display:flex;align-items:center;overflow-x:auto;gap:4px;padding:8px 12px;scrollbar-width:none}
+  .F .toc{position:sticky;top:0;z-index:5;height:auto;background:var(--bg);border-right:0;border-bottom:1px solid var(--line);display:flex;align-items:center;overflow-x:auto;gap:4px;padding:8px 12px;scrollbar-width:none;scroll-padding-inline:12px}
   .F .toc .tg{display:none}
   .F .toc a{flex:none;white-space:nowrap;padding:4px 10px;border:1px solid var(--line);border-radius:99px;font-size:13px}
   .F .toc a.cur{border-color:var(--accent)}

@@ -56,9 +56,11 @@ write display texts yourself: they stay out of this session's context. Pass it:
 - this brief, as is:
 
 > Write one display file per block below, at the block's `display` path, as JSON in `<lang>`:
-> `{section, title, tldr, body, check, flag, covers, diagram}`. All eight fields are required.
+> `{section, group, title, tldr, body, check, flag, covers, diagram}`. All nine fields are required.
 >
 > - `section`: the block's `##` heading in `<lang>`.
+> - `group`: the block's `group` label in `<lang>` (the topic list shows it above the group's blocks), or `null`
+>   when the block has none.
 > - `title`: the block's id token (`S3`, `O2`, `D1`), then ` · ` and a short name; a block with no token
 >   (`overview`, `architecture/files`) gets the name alone.
 > - `tldr`: one sentence. Literal syntax (markdown, paths with `<…>`, commands) goes in a code span.

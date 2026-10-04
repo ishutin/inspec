@@ -197,9 +197,9 @@ const DIAGRAMS = {
 
 export function displayProblem(d) {
   if (!obj(d)) return 'not a JSON object';
-  for (const f of ['section', 'title', 'tldr', 'body', 'check', 'flag', 'covers', 'diagram']) if (!(f in d)) return `missing field "${f}"`;
+  for (const f of ['section', 'group', 'title', 'tldr', 'body', 'check', 'flag', 'covers', 'diagram']) if (!(f in d)) return `missing field "${f}"`;
   for (const f of ['section', 'title', 'tldr', 'body']) if (!str(d[f])) return `"${f}" must be text`;
-  for (const f of ['check', 'flag']) if (!strOrNull(d[f])) return `"${f}" must be text or null`;
+  for (const f of ['group', 'check', 'flag']) if (!strOrNull(d[f])) return `"${f}" must be text or null`;
   if (!Array.isArray(d.covers) || !d.covers.every((c) => obj(c) && str(c.id) && str(c.text))) return '"covers" must be a list of {id, text}';
   return diagramProblem(d.diagram);
 }

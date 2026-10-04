@@ -26,6 +26,7 @@ const row = (id) => /^S\d+$/.test(id);
 
 const en = (b) => ({
   section: b.section,
+  group: b.group ?? null,
   title: row(b.id) ? `${b.id} · Row ${b.id}` : `Name of ${b.id}`,
   tldr: `Summary of ${b.id}.`,
   body: `Body of ${b.id}.`,
@@ -37,6 +38,7 @@ const en = (b) => ({
 
 const ru = (b) => ({
   section: SECTIONS_RU[b.section] || 'Раздел',
+  group: b.group ? 'Группа' : null,
   title: row(b.id) ? `${b.id} · Строка ${b.id}` : `Блок ${b.id}`,
   tldr: `Кратко о блоке ${b.id}.`,
   body: `Текст блока **${b.id}**:\n\n- пункт один\n- пункт два с \`кодом\``,
@@ -135,7 +137,7 @@ test('S15 the topic list, the focus card, clicks and the keyboard', async ({ pag
   await page.goto(d.url);
 
   // Every block, in order, grouped under its section name, with its title and a ⚑ only where flagged.
-  await expect(page.locator('.toc a.topic')).toHaveCount(47);
+  await expect(page.locator('.toc a.topic')).toHaveCount(53);
   expect(await page.locator('.toc a.topic').evaluateAll((as) => as.map((a) => a.dataset.id))).toEqual(ids);
   const sections = d.blocks.map((b) => b.section).filter((s, i, a) => s !== a[i - 1]);
   await expect(page.locator('.toc .tg')).toHaveText(sections);
@@ -149,7 +151,7 @@ test('S15 the topic list, the focus card, clicks and the keyboard', async ({ pag
   expect(new Set(colours).size).toBe(4);
 
   // The first block: section, n of N, title, summary, body; empty fields are not shown.
-  await expect(card(page).locator('.tag')).toHaveText('Overview · 1 of 47');
+  await expect(card(page).locator('.tag')).toHaveText('Overview · 1 of 53');
   await expect(card(page).locator('h2')).toHaveText('Name of overview');
   await expect(card(page).locator('.tldr')).toHaveText('Summary of overview.');
   await expect(card(page).locator('.body')).toHaveText('Body of overview.');
@@ -158,7 +160,7 @@ test('S15 the topic list, the focus card, clicks and the keyboard', async ({ pag
 
   // A flagged row: flag, and one quiet line with the check and the covered ids, each with its text on hover.
   await topic(page, 'S3').click();
-  await expect(card(page).locator('.tag')).toHaveText('Contract · 4 of 47');
+  await expect(card(page).locator('.tag')).toHaveText('Contract · 4 of 53');
   await expect(card(page).locator('h2')).toHaveText('S3 · Row S3');
   await expect(card(page).locator('.flag')).toContainText('Chosen without the operator.');
   await expect(card(page).locator('.meta')).toHaveCount(1);
@@ -425,7 +427,7 @@ test('S21 with Russian display text, no Cyrillic outside [data-content]; the int
 
   // The chrome is English.
   for (const name of ['Approve', 'Comment on block', 'Hide source']) await expect(card(page).getByRole('button', { name })).toBeVisible();
-  await expect(page.locator('#submit')).toHaveText('46 to review');
+  await expect(page.locator('#submit')).toHaveText('52 to review');
   await expect(page.locator('#themeSeg button')).toHaveText(['System', 'Light', 'Dark']);
 
   // The summary screen (S30): its Russian texts inside [data-content], its chrome English.
@@ -443,6 +445,7 @@ test('S22 display markdown renders as elements; raw HTML, scripts and javascript
   docs.push(d);
   const hostile = {
     section: 'Deliveries',
+    group: null,
     title: 'D1 · **Bold** *it* `code` <b>raw</b>',
     tldr: 'Has **bold**, *italic*, `- **O<n>**` and <script>window.__x=1</script> <img src=x onerror="window.__x=2">',
     body: [
@@ -797,16 +800,16 @@ test('S20 at 760 px or less the topic list is one scrolling row, the focused top
     await holds('first block');
     // Far along by keyboard, then by a click at the row's end, then back to the start.
     for (let i = 0; i < 25; i++) await page.keyboard.press('ArrowDown');
-    await expect(card(page).locator('.tag')).toContainText('26 of 47');
+    await expect(card(page).locator('.tag')).toContainText('26 of 53');
     await holds('block 26');
     await page.locator('.F .toc').evaluate((t) => (t.scrollLeft = t.scrollWidth));
     await topic(page, 'open').click();
-    await expect(card(page).locator('.tag')).toContainText('47 of 47');
+    await expect(card(page).locator('.tag')).toContainText('53 of 53');
     await holds('last block');
     await card(page).getByRole('button', { name: 'Show source' }).click();
     await holds('source shown');
-    for (let i = 0; i < 46; i++) await page.keyboard.press('k');
-    await expect(card(page).locator('.tag')).toContainText('1 of 47');
+    for (let i = 0; i < 52; i++) await page.keyboard.press('k');
+    await expect(card(page).locator('.tag')).toContainText('1 of 53');
     await holds('back at the first');
   }
 });
@@ -819,6 +822,7 @@ const rowsDoc = (rows) => `# Demo\n\n## Contract\n\n${Object.entries(rows).map((
 const words = (b) => b.source.replace(/^[\s\S]*?\*\*\w+\*\* /, '').trim();
 const vDisplay = (b) => ({
   section: 'Contract',
+  group: null,
   title: `${b.id} · Title ${words(b)}`,
   tldr: `The row says ${words(b)} today.`,
   body: `First paragraph about ${words(b)}.\n\n- a list item ${words(b)}`,

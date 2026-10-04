@@ -64,7 +64,7 @@ const onSum = () => cur === SUM;
 // The summary takes comments only: no status, no approval, never counted in progress (S30, S31).
 const sumEntry = () => (review.summary ||= { comments: [] });
 const target = () => (onSum() ? sumEntry() : entry(doc.blocks[cur].id));
-const disp = (b) => b.display || { section: b.section, title: b.id, tldr: '', body: '', check: null, flag: null, covers: [], diagram: null };
+const disp = (b) => b.display || { section: b.section, group: null, title: b.id, tldr: '', body: '', check: null, flag: null, covers: [], diagram: null };
 
 function nextOpen(i) {
   const bs = doc.blocks;
@@ -329,7 +329,9 @@ function toc() {
         section = d.section;
         group = null;
       }
-      if (b.group && b.group !== group) h += `<div class="tg2" data-content>${inline(b.group)}</div>`;
+      // The label is the display entry's, in the display language (S35); the source's group only marks where a
+      // group starts.
+      if (b.group && b.group !== group && d.group) h += `<div class="tg2" data-content>${inline(d.group)}</div>`;
       group = b.group;
       return `${h}<a class="topic${i === cur ? ' cur' : ''}" data-id="${esc(b.id)}" data-i="${i}"><span class="dot ${esc(entry(b.id).status)}"></span><span class="tt" data-content>${inline(d.title)}</span>${d.flag ? '<span class="fl" title="Agent\'s decision">⚑</span>' : ''}</a>`;
     })
@@ -463,11 +465,11 @@ function render() {
     return;
   }
   const list = document.querySelector('.F .toc');
-  const scroll = list ? list.scrollTop : 0;
+  const scroll = list ? [list.scrollTop, list.scrollLeft] : [0, 0];
   $('app').innerHTML = doc.blocks.length ? `<div class="F"><nav class="toc">${toc()}</nav>${focusCard()}</div>` : '<p class="loading">This document has no blocks.</p>';
   const nav = document.querySelector('.F .toc');
   if (nav) {
-    nav.scrollTop = scroll;
+    [nav.scrollTop, nav.scrollLeft] = scroll;
     const c = nav.querySelector('a.cur');
     if (c) c.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   }

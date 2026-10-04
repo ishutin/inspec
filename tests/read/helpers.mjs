@@ -45,15 +45,15 @@ export function prepare(repo, kind, lang = 'en') {
   return JSON.parse(r.out);
 }
 
-export function display(id) {
-  return { section: 'Section', title: `${id} · Name`, tldr: 'One line.', body: 'Body.', check: null, flag: null, covers: [], diagram: null };
+export function display(id, group = null) {
+  return { section: 'Section', group, title: `${id} · Name`, tldr: 'One line.', body: 'Body.', check: null, flag: null, covers: [], diagram: null };
 }
 
 // Writes a display entry for each printed block, as the session's subagent does.
 export function writeDisplays(blocks) {
   for (const b of blocks) {
     fs.mkdirSync(path.dirname(b.display), { recursive: true });
-    fs.writeFileSync(b.display, JSON.stringify(display(b.id)));
+    fs.writeFileSync(b.display, JSON.stringify(display(b.id, b.group ?? null)));
   }
 }
 
