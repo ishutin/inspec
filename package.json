@@ -1,0 +1,8 @@
+{
+  "name": "inspec-dev",
+  "private": true,
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "test": "node --test --test-timeout=30000 tests/read/"
+  }
+}
