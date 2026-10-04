@@ -2,7 +2,7 @@
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
-import { split } from './parse.mjs';
+import { split, summaryHash } from './parse.mjs';
 
 export const KINDS = ['intent', 'spec', 'plan'];
 export const COMMENT_KINDS = ['change', 'question', 'unclear'];
@@ -38,6 +38,7 @@ export function rootDir(cwd = process.cwd()) {
 
 export const docDir = (root, slug, kind) => path.join(root, slug, kind);
 export const displayPath = (dir, hash, lang) => path.join(dir, 'display', `${hash}.${lang}.json`);
+export const summaryPath = (dir, hash, lang) => path.join(dir, 'display', `summary.${hash}.${lang}.json`);
 
 export function readJSON(file, fallback = null) {
   try {
@@ -107,9 +108,12 @@ export function prepare(mdPath, { slug, kind, lang, cwd }) {
   }
 
   // start.json: the round as prepare starts it, before the page's edits; drop returns to it.
-  const start = { round, blocks: {} };
+  // The summary is no block: its comments carry to every next round as they are (read-only there, S31) and stay
+  // through a prepare rerun of the same round whatever changed, since its hash covers every block.
+  const sumHash = summaryHash(blocks.map((b) => b.hash));
+  const start = { round, blocks: {}, summary: { hash: sumHash, comments: structuredClone(sent?.summary?.comments || []) } };
   for (const b of blocks) start.blocks[b.id] = carry(sent?.blocks[b.id], b.hash, sent?.round);
-  const review = { round, blocks: {} };
+  const review = { round, blocks: {}, summary: old && old.round === round && old.summary ? { ...old.summary, hash: sumHash } : start.summary };
   for (const b of blocks) {
     const prev = old && old.round === round ? old.blocks[b.id] : null;
     review.blocks[b.id] = prev && prev.hash === b.hash ? prev : start.blocks[b.id];
@@ -119,25 +123,30 @@ export function prepare(mdPath, { slug, kind, lang, cwd }) {
   const replies = readJSON(repliesFile);
   if (replies && typeof replies === 'object') {
     for (const r of [start, review]) {
-      for (const e of Object.values(r.blocks)) {
+      for (const e of [...Object.values(r.blocks), r.summary]) {
         for (const c of e.comments) if (Object.hasOwn(replies, c.id) && typeof replies[c.id] === 'string') c.reply = replies[c.id];
       }
     }
   }
-  writeJSON(path.join(dir, 'blocks.json'), { doc: slug, kind, lang, round, blocks });
+  writeJSON(path.join(dir, 'blocks.json'), { doc: slug, kind, lang, round, blocks, summary: { hash: sumHash } });
   writeJSON(path.join(dir, 'start.json'), start);
   writeJSON(path.join(dir, 'review.json'), review);
   if (fs.existsSync(repliesFile)) fs.rmSync(repliesFile, { force: true });
 
-  return blocks
+  const out = blocks
     .filter((b) => !fs.existsSync(displayPath(dir, b.hash, lang)))
     .map((b) => ({ id: b.id, section: b.section, group: b.group, hash: b.hash, source: b.source, display: displayPath(dir, b.hash, lang) }));
+  // The summary entry (S29), written from the whole document at `doc`.
+  const sum = summaryPath(dir, sumHash, lang);
+  if (!fs.existsSync(sum)) out.push({ id: 'summary', hash: sumHash, doc: mdPath, display: sum });
+  return out;
 }
 
 export function load(dir) {
   const blocks = readJSON(path.join(dir, 'blocks.json'));
   if (!blocks) return null;
   const review = readJSON(path.join(dir, 'review.json')) || { round: blocks.round, blocks: {} };
+  review.summary ||= { hash: blocks.summary?.hash || null, comments: [] };
   return { ...blocks, review, result: readJSON(path.join(dir, 'result.json')) };
 }
 
@@ -170,7 +179,10 @@ export function displayProblem(d) {
   for (const f of ['section', 'title', 'tldr', 'body']) if (!str(d[f])) return `"${f}" must be text`;
   for (const f of ['check', 'flag']) if (!strOrNull(d[f])) return `"${f}" must be text or null`;
   if (!Array.isArray(d.covers) || !d.covers.every((c) => obj(c) && str(c.id) && str(c.text))) return '"covers" must be a list of {id, text}';
-  const g = d.diagram;
+  return diagramProblem(d.diagram);
+}
+
+function diagramProblem(g) {
   if (g === null) return null;
   if (!obj(g)) return '"diagram" must be null or an object';
   if (!Object.hasOwn(DIAGRAMS, g.type)) return `unknown diagram type ${JSON.stringify(g.type ?? null)}`;
@@ -179,26 +191,32 @@ export function displayProblem(d) {
   return ok === true ? null : ok;
 }
 
-// [{id, reason}] for each block whose display entry is missing or breaks the schema.
+// The summary entry's schema (S29): {tldr, body, diagram}.
+export function summaryProblem(d) {
+  if (!obj(d)) return 'not a JSON object';
+  for (const f of ['tldr', 'body', 'diagram']) if (!(f in d)) return `missing field "${f}"`;
+  for (const f of ['tldr', 'body']) if (!str(d[f])) return `"${f}" must be text`;
+  return diagramProblem(d.diagram);
+}
+
+// [{id, reason}] for each block whose display entry is missing or breaks the schema, and for the summary.
 export function badDisplays(dir) {
   const s = load(dir);
   const out = [];
-  for (const b of s.blocks) {
-    const file = displayPath(dir, b.hash, s.lang);
-    if (!fs.existsSync(file)) {
-      out.push({ id: b.id, reason: `no display entry (${file})` });
-      continue;
-    }
+  const check = (id, file, problem) => {
+    if (!fs.existsSync(file)) return out.push({ id, reason: `no display entry (${file})` });
     let d;
     try {
       d = JSON.parse(fs.readFileSync(file, 'utf8'));
     } catch (e) {
-      out.push({ id: b.id, reason: `not valid JSON: ${e.message}` });
-      continue;
+      return out.push({ id, reason: `not valid JSON: ${e.message}` });
     }
-    const why = displayProblem(d);
-    if (why) out.push({ id: b.id, reason: why });
-  }
+    const why = problem(d);
+    if (why) out.push({ id, reason: why });
+  };
+  for (const b of s.blocks) check(b.id, displayPath(dir, b.hash, s.lang), displayProblem);
+  if (!s.summary) out.push({ id: 'summary', reason: 'prepared before summaries: run prepare again' });
+  else check('summary', summaryPath(dir, s.summary.hash, s.lang), summaryProblem);
   return out;
 }
 

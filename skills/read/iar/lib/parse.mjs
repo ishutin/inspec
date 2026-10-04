@@ -11,6 +11,9 @@ export function hash(source) {
   return createHash('sha256').update(lines.join('\n')).digest('hex').slice(0, 12);
 }
 
+// The document summary's hash (S29): sha256 over the block hashes in order, one per line, first 12 hex.
+export const summaryHash = (hashes) => createHash('sha256').update(hashes.join('\n')).digest('hex').slice(0, 12);
+
 export function slugify(text) {
   return text.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-+|-+$/g, '') || 'section';
 }

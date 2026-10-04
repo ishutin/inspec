@@ -119,7 +119,7 @@ test('S15 the topic list, the focus card, clicks and the keyboard', async ({ pag
   await page.goto(d.url);
 
   // Every block, in order, grouped under its section name, with its title and a ⚑ only where flagged.
-  await expect(page.locator('.toc a.topic')).toHaveCount(42);
+  await expect(page.locator('.toc a.topic')).toHaveCount(47);
   expect(await page.locator('.toc a.topic').evaluateAll((as) => as.map((a) => a.dataset.id))).toEqual(ids);
   const sections = d.blocks.map((b) => b.section).filter((s, i, a) => s !== a[i - 1]);
   await expect(page.locator('.toc .tg')).toHaveText(sections);
@@ -133,7 +133,7 @@ test('S15 the topic list, the focus card, clicks and the keyboard', async ({ pag
   expect(new Set(colours).size).toBe(4);
 
   // The first block: section, n of N, title, summary, body; empty fields are not shown.
-  await expect(card(page).locator('.tag')).toHaveText('Overview · 1 of 42');
+  await expect(card(page).locator('.tag')).toHaveText('Overview · 1 of 47');
   await expect(card(page).locator('h2')).toHaveText('Name of overview');
   await expect(card(page).locator('.tldr')).toHaveText('Summary of overview.');
   await expect(card(page).locator('.body')).toHaveText('Body of overview.');
@@ -142,7 +142,7 @@ test('S15 the topic list, the focus card, clicks and the keyboard', async ({ pag
 
   // A flagged row: flag, and one quiet line with the check and the covered ids, each with its text on hover.
   await topic(page, 'S3').click();
-  await expect(card(page).locator('.tag')).toHaveText('Contract · 4 of 42');
+  await expect(card(page).locator('.tag')).toHaveText('Contract · 4 of 47');
   await expect(card(page).locator('h2')).toHaveText('S3 · Row S3');
   await expect(card(page).locator('.flag')).toContainText('Chosen without the operator.');
   await expect(card(page).locator('.meta')).toHaveCount(1);
@@ -772,16 +772,16 @@ test('S20 at 760 px or less the topic list is one scrolling row, the focused top
     await holds('first block');
     // Far along by keyboard, then by a click at the row's end, then back to the start.
     for (let i = 0; i < 25; i++) await page.keyboard.press('ArrowDown');
-    await expect(card(page).locator('.tag')).toContainText('26 of 42');
+    await expect(card(page).locator('.tag')).toContainText('26 of 47');
     await holds('block 26');
     await page.locator('.F .toc').evaluate((t) => (t.scrollLeft = t.scrollWidth));
     await topic(page, 'open').click();
-    await expect(card(page).locator('.tag')).toContainText('42 of 42');
+    await expect(card(page).locator('.tag')).toContainText('47 of 47');
     await holds('last block');
     await card(page).getByRole('button', { name: 'Show source' }).click();
     await holds('source shown');
-    for (let i = 0; i < 41; i++) await page.keyboard.press('k');
-    await expect(card(page).locator('.tag')).toContainText('1 of 42');
+    for (let i = 0; i < 46; i++) await page.keyboard.press('k');
+    await expect(card(page).locator('.tag')).toContainText('1 of 47');
     await holds('back at the first');
   }
 });

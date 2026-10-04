@@ -18,8 +18,10 @@ after(() => {
   }
 });
 
-const ids = (blocks) => blocks.map((b) => b.id);
-const byId = (blocks) => Object.fromEntries(blocks.map((b) => [b.id, b.hash]));
+// prepare also prints the summary entry (S29), which is no block: these rows look at the blocks only.
+const only = (out) => out.filter((b) => b.id !== 'summary');
+const ids = (blocks) => only(blocks).map((b) => b.id);
+const byId = (blocks) => Object.fromEntries(only(blocks).map((b) => [b.id, b.hash]));
 
 test('S1 intent splits into its sections and outcomes', () => {
   const o = Array.from({ length: 13 }, (_, i) => `O${i + 1}`);
@@ -65,19 +67,19 @@ test('S2 hashes are stable and depend only on the block source', () => {
   assert.deepEqual(byId(prepare(r, 'spec')), a);
 
   fs.writeFileSync(file, text.replace('## Touches', '## What it touches'));
-  const d = Object.fromEntries(prepare(r, 'spec').map((x) => [x.section === 'What it touches' ? 'touches' : x.id, x.hash]));
+  const d = Object.fromEntries(only(prepare(r, 'spec')).map((x) => [x.section === 'What it touches' ? 'touches' : x.id, x.hash]));
   assert.deepEqual(Object.keys(a).filter((id) => a[id] !== d[id]), ['touches']);
 });
 
 test('S3 prepare prints only blocks without a display entry for the language', async () => {
   const r = repo();
-  const all = prepare(r, 'spec');
-  assert.equal(all.length, 42);
+  const all = only(prepare(r, 'spec'));
+  assert.equal(all.length, 47);
   writeDisplays(all.slice(0, 10));
   assert.deepEqual(ids(prepare(r, 'spec')), ids(all.slice(10)));
-  writeDisplays(all.slice(10));
+  writeDisplays(prepare(r, 'spec'));
   assert.deepEqual(prepare(r, 'spec'), []);
-  assert.equal(prepare(r, 'spec', 'ru').length, 42);
+  assert.equal(only(prepare(r, 'spec', 'ru')).length, 47);
   assert.deepEqual(prepare(r, 'spec'), []);
 
   const written = Object.fromEntries(all.map((b) => [b.id, readJSON(b.display)]));
@@ -87,7 +89,7 @@ test('S3 prepare prints only blocks without a display entry for the language', a
   const u = new URL(url);
   const api = `${u.origin}${u.pathname.replace(/\/demo\/spec$/, '/api/demo/spec/doc')}`;
   const doc = await (await fetch(api)).json();
-  assert.equal(doc.blocks.length, 42);
+  assert.equal(doc.blocks.length, 47);
   for (const b of doc.blocks) assert.deepEqual(b.display, written[b.id]);
 });
 

@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { readJSON, writeJSON, ensureRoot, docDir, load, displayPath, applyReview, submit, KINDS } from './state.mjs';
+import { readJSON, writeJSON, ensureRoot, docDir, load, displayPath, summaryPath, applyReview, submit, KINDS } from './state.mjs';
 
 export const BASE_PORT = 47100;
 // The server exits after this long with no request (S28); INSPEC_READ_IDLE_MS overrides it for tests.
@@ -53,6 +53,8 @@ function docPayload(dir) {
         prevDisplay: prev && prev !== b.hash ? readJSON(displayPath(dir, prev, s.lang)) : null,
       };
     }),
+    // The document summary (S29-S32): not a block, shown before the first one.
+    summary: s.summary ? { hash: s.summary.hash, display: readJSON(summaryPath(dir, s.summary.hash, s.lang)) } : null,
     review: s.review,
     submitted: !!(s.result && s.result.round === s.round),
   };

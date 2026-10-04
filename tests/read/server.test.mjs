@@ -313,7 +313,7 @@ test('S28 one server serves several documents, and /<token>/ lists them', async 
   assert.equal(spec.url, plan.url.replace(/plan$/, 'spec'), 'same server.json: same port and token');
   assert.match(r.out, new RegExp(`inspec-read: ${plan.url.replace('/demo/plan', '/other/plan')}$`, 'm'));
 
-  for (const [u, kind, n] of [[plan, 'plan', 2], [spec, 'spec', 42]]) {
+  for (const [u, kind, n] of [[plan, 'plan', 2], [spec, 'spec', 47]]) {
     assert.equal((await fetch(u.url)).status, 200);
     const d = await (await fetch(`${u.api}/doc`)).json();
     assert.equal(d.kind, kind);
