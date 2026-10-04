@@ -4,7 +4,7 @@ status: todo
 ---
 
 ## D1 — Prepare, open and wait
-status: in progress
+status: done
 - [x] S1
 - [x] S2
 - [x] S3
@@ -35,6 +35,8 @@ Log:
 - blocked on S1
 - resumed from 75e08f2 on the operator's word: spec fixed, D1 back in progress
 - S1: fixtures/spec.md copied from spec.md as committed (75e08f2), spec.ids unchanged (same 42 ids); intent list in prepare.test.mjs now O1–O13; prepare.test 7/7
+- verify: prepare.test 7/7 (S1–S4), server.test 6/6 (S6–S9), `npm test` 13/13, all bare; no lint or type commands in the repository; no server left running; the resume diff (fixture, test list) read against S1 and States
+- done
 Unblocked (was Blocked): S1 is a spec defect. Its intent list stops at O12, but the intent.md the fixture must copy "as committed" has O13 (added in 7a0ad18, before "spec agreed" ecb5e82); the split rules give `O13` between `O12` and `headline-scenario`, so the row cannot hold without changing what it says. Tried: parse.mjs matches the Split rules (plan and spec lists hold, spec.ids 42 ids); a stale intent copy would satisfy the list but not "as committed". To unblock: through /inspec:spec, add O13 to S1's intent list (and fix "outcomes O1–O12" in the spec's opening and "41 blocks" in States to 42), then copy the new spec.md into tests/read/fixtures/ (its ids stay the same), update the list in tests/read/prepare.test.mjs and check S1. Everything else in D1 holds. — answered: spec fixed through /inspec:spec in 75e08f2 (S1 lists O13, O1–O13, 42 blocks).
 
 ## D2 — Guards, drop and many documents
