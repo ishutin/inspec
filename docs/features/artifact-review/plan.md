@@ -174,8 +174,9 @@ Log:
 - done
 
 ## D8 — Fixes from the live run
-status: todo
+status: blocked
 builds on: D7
+Blocked: S39's check (`grep -qF 'remark on the document as a whole' skills/read/SKILL.md`) was green on the base (2edd130): D7 already wrote that phrase in SKILL.md §5, so the check cannot prove the row. The row's text is written (§5: a summary comment is acted on by editing the document through its owning skill or answered in `replies.json`, and never sent to the display subagent to reword the summary); S34–S38 hold. Unblock with a check through `/inspec:spec` that is red on 2edd130, e.g. `grep -qF 'never sent to the display' skills/read/SKILL.md`, then rerun the build to check S39 off and finish.
 - [x] S34
 - [x] S35
 - [x] S36
@@ -200,3 +201,5 @@ Log:
 - S38: diff.js sets a space (`span.ds`) before and after a run of deleted words wherever the neighbouring text has none ("url и," now reads "url и ,", the QA's "urlи,"), and the quote highlight skips those spaces like the deleted words; a matrix cell with a `tone` gets class `t-<tone>` and its background (`--ok-bg`, new tokens `--chg-bg` and `--new-bg`, `--warn-bg`, in light and dark), tag or not; ui.spec S13 moved: it asserted the glued "othernew", now "other new"; test seen red on the glued "epsilonzeta" and on one background for every tone
 - S39 (text written, row left open): skills/read/SKILL.md §5 now says a summary comment is acted on by editing the document through its owning skill, or answered in `replies.json`, and is never sent to the display subagent as a request to reword the summary (it is written again whenever a block changes); the row's check `grep -qF 'remark on the document as a whole'` was already green on 2edd130, so it cannot prove this row
 - S37 follow-up from the screenshots: the list's round cell took the top bar's `.round` pill; `.docs .cell.round` resets it
+- verify: qa-fixes.test 1/1 (S34), qa-fixes.spec 4/4 (S35–S38), prepare.test 7/7, server.test 12/12, summary.test 2/2, ui.spec 14/14, summary.spec 3/3, S25 S26 S33 greps exit 0, `npm test` green (node 22/22, playwright 21/21); no lint or type commands in the repository; no server left running; screenshots (scratchpad qa-fixed/): session-flow diagram at 1280 and 520, the document list light and dark, Russian group labels in the topic list, a tab on "Review sent" in round 1 after a round-2 prepare and in round 2 after `open`, a diff with deleted words light and dark; whole diff read against the rows and States (pre-D8 state without published.json is served as prepared; entries without `group` are refused by open and asked for again)
+- blocked on S39's check (see Blocked)
