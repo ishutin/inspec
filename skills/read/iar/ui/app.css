@@ -207,7 +207,7 @@ mark.cm.old{background:none;border-bottom-style:dashed}
 .docs>a{color:var(--ink-2);text-decoration:none;border-top:1px solid var(--line);font-size:14px}
 .docs>a:hover{background:var(--soft)}
 .docs .slug{color:var(--ink);font-weight:600}
-.docs .round{color:var(--muted)}
+.docs .cell.round{color:var(--muted);background:none;border-radius:0;font-size:inherit}
 @media (max-width:520px){.docs .cell{padding:10px 10px}}
 /* a matrix cell's tone colours the cell, tag or not (S38) */
 .mx>div.t-ok{background:var(--ok-bg)}.mx>div.t-changed{background:var(--chg-bg)}.mx>div.t-new{background:var(--new-bg)}.mx>div.t-warn{background:var(--warn-bg)}
