@@ -73,8 +73,9 @@ Page (`skills/read/iar/ui/`), judged against `mockup.html`:
 
 - **S15** The topic list shows every block, grouped under its section name, each with its title, a status dot
   whose colour differs for each of "Not reviewed", "Approved", "Has comments" and "Changed", and ⚑ when the
-  block has a flag. The focused block shows its section, "n of N", title, summary, flag, body, check, "Covers
-  intent" with outcome ids and texts, the diagram, and comments; a field that is empty is not shown. Clicking a
+  block has a flag. The focused block shows its section, "n of N", title, summary, flag, body, the diagram,
+  one quiet line with the check and the covered outcome ids (each id shows its text on hover), and comments; a
+  field that is empty is not shown. Clicking a
   topic focuses it; ↑/↓ and j/k move; Enter outside the comment box approves and moves to the next block that
   is not approved, and on an approved block makes it "Not reviewed"; C opens a comment on the block. The spec fixture of S1 renders every block. — check:
   `npx playwright test tests/read/ui.spec.mjs`
@@ -82,7 +83,8 @@ Page (`skills/read/iar/ui/`), judged against `mockup.html`:
   stores the selected text as the quote, highlights it, and marks the block "Has comments". Approve on a block
   with this round's comments asks "Delete N comments and approve?". Yes deletes them and approves; No changes
   nothing. Earlier rounds' comments and replies stay. — check: `npx playwright test tests/read/ui.spec.mjs`
-- **S17** "Show source" shows the block's original markdown as plain text. — check:
+- **S17** "Show source" shows the block's original markdown rendered by the same renderer as S22, so its
+  lists, code and emphasis read as formatted text. — check:
   `npx playwright test tests/read/ui.spec.mjs`
 - **S18** The submit button reads "N to review" and is disabled while N blocks are "Not reviewed" or "Changed".
   It reads "Send N comments", N counting this round's comments, when none is pending and some have comments.

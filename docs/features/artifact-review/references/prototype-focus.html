@@ -63,7 +63,9 @@ ins{background:var(--ins);text-decoration:none}
 .facts dt{color:var(--muted);font-size:11.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;padding-top:2px}
 .facts dd{margin:0}.facts dd b{color:var(--ink);font-weight:600}
 .check{font-size:13px;color:var(--muted);border-left:3px solid var(--line);padding-left:10px;margin-top:10px}
-.src{white-space:pre-wrap;font-family:ui-monospace,Menlo,monospace;font-size:12.5px;background:var(--code);padding:10px;border-radius:8px;margin-top:10px}
+.src{background:var(--soft);border-radius:8px;padding:12px 16px;margin-top:12px;font-size:14px;line-height:1.6;color:var(--ink-2)}
+.src .lab{display:block;font-size:11.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.src p,.src ul{margin:0 0 .6em}.src ul{padding-left:1.2em}.src h4{margin:.2em 0 .4em;font-size:14px;color:var(--ink)}.src pre.code{font-family:ui-monospace,Menlo,monospace;font-size:12.5px;background:var(--code);padding:8px 10px;border-radius:6px;overflow:auto;white-space:pre}
 .cmts{margin-top:12px;display:flex;flex-direction:column;gap:6px}
 .cmt{background:var(--soft);border-radius:8px;padding:8px 10px;font-size:13.5px}
 .cmt q{display:block;color:var(--muted);font-size:12.5px;quotes:"«" "»";margin-bottom:2px}
@@ -177,6 +179,8 @@ ins{background:var(--ins);text-decoration:none}
 @media (max-width:760px){.flow{flex-direction:column}.flow li{flex-direction:column}.flow li+li::before{content:"↓";align-self:flex-start;padding:4px 14px}.flow .n{max-width:none}.cmp{grid-template-columns:1fr}.stt{grid-template-columns:auto auto auto;}.stt .on{grid-column:1/-1;margin:-2px 0 6px}}
 .lead-q{color:var(--muted);font-size:12.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;margin:18px 0 4px}
 @media (max-width:760px){.mx{grid-template-columns:1fr!important}.mx .h{display:none}.mx .r{padding:10px 0 0}}
+.meta{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:12px;font-size:12.5px;color:var(--muted)}
+.meta code{font-size:12px;background:none;padding:0;color:var(--muted)}.meta b{color:var(--ink-2);font-weight:600;margin-right:4px;cursor:help}
 </style>
 </head>
 <body>
@@ -278,14 +282,28 @@ const DIAGRAMS={
 };
 function renderDiagram(d){const f=DIAGRAMS[d&&d.type];if(!f)return '';
   return `<figure class="dia" data-content style="margin:18px 0 6px">${d.caption?`<figcaption class="cap">${dt(d.caption)}</figcaption>`:''}${f(d)}${d.note?`<div class="note">${dt(d.note)}</div>`:''}</figure>`}
+function mdLite(src){const out=[];let para=[],list=null,code=null;
+  const inl=t=>t.replace(/`([^`]+)`/g,'<code>$1</code>').replace(/\*\*([^*]+)\*\*/g,'<b>$1</b>');
+  const flushP=()=>{if(para.length){out.push('<p>'+inl(para.join(' '))+'</p>');para=[]}};
+  const flushL=()=>{if(list){out.push('<ul>'+list.map(x=>'<li>'+inl(x)+'</li>').join('')+'</ul>');list=null}};
+  for(const raw of esc(src).split('\n')){
+    if(raw.trim().startsWith('```')){if(code){out.push('<pre class="code">'+code.join('\n')+'</pre>');code=null}else{flushP();flushL();code=[]}continue}
+    if(code){code.push(raw);continue}
+    const li=raw.match(/^\s*(?:[-*]|\d+\.) (.*)/);
+    if(li&&!/^\s{4,}/.test(raw)){flushP();(list=list||[]).push(li[1]);continue}
+    if(list&&/^\s+\S/.test(raw)){list[list.length-1]+=' '+raw.trim();continue}
+    const hd=raw.match(/^#{2,3} (.*)/);if(hd){flushP();flushL();out.push('<h4>'+inl(hd[1])+'</h4>');continue}
+    if(!raw.trim()){flushP();flushL();continue}
+    flushL();para.push(raw.trim())}
+  flushP();flushL();if(code)out.push('<pre class="code">'+code.join('\n')+'</pre>');return out.join('')}
 function trace(b){const c=COVERS[b.id];if(!c)return '';return `<dt>Covers</dt><dd>${c.map(o=>`<b>${o}</b> ${OUTCOMES[o]}`).join('<br>')}</dd>`}
 function content(b){return `
   <div class="tldr" data-sel="${b.id}">${b.tldr}</div>
   ${b.flag?`<div class="flag"><span class="lab">⚑ Agent's decision</span><span data-sel="${b.id}">${b.flag}</span></div>`:''}
   ${b.body?`<div class="body" data-sel="${b.id}">${b.body}</div>`:''}
   ${b.diagram?renderDiagram(b.diagram):''}
-  ${b.check||COVERS[b.id]?`<dl class="facts">${b.check?`<dt>Check</dt><dd data-sel="${b.id}">${b.check}</dd>`:''}${trace(b)}</dl>`:''}
-  ${showSrc.has(b.id)?`<div class="src">${esc(b.src)}</div>`:''}
+  ${b.check||COVERS[b.id]?`<div class="meta">${b.check?`<span data-sel="${b.id}">${b.check}</span>`:''}${COVERS[b.id]?`<span>covers ${COVERS[b.id].map(o=>`<b title="${OUTCOMES[o]}">${o}</b>`).join(' ')}</span>`:''}</div>`:''}
+  ${showSrc.has(b.id)?`<div class="src" data-content><span class="lab">Source</span>${mdLite(b.src)}</div>`:''}
   ${cmtsHtml(b.id)}`}
 function acts(b){const s=st[b.id].status;return `<div class="actions">
   <button class="btn ${s==='ok'?'ok':'primary'}" onclick="approve('${b.id}')">${s==='ok'?'✓ Approved':'Approve'} <span class="kbd">↵</span></button>

@@ -63,7 +63,9 @@ ins{background:var(--ins);text-decoration:none}
 .facts dt{color:var(--muted);font-size:11.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;padding-top:2px}
 .facts dd{margin:0}.facts dd b{color:var(--ink);font-weight:600}
 .check{font-size:13px;color:var(--muted);border-left:3px solid var(--line);padding-left:10px;margin-top:10px}
-.src{white-space:pre-wrap;font-family:ui-monospace,Menlo,monospace;font-size:12.5px;background:var(--code);padding:10px;border-radius:8px;margin-top:10px}
+.src{background:var(--soft);border-radius:8px;padding:12px 16px;margin-top:12px;font-size:14px;line-height:1.6;color:var(--ink-2)}
+.src .lab{display:block;font-size:11.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.src p,.src ul{margin:0 0 .6em}.src ul{padding-left:1.2em}.src h4{margin:.2em 0 .4em;font-size:14px;color:var(--ink)}.src pre.code{font-family:ui-monospace,Menlo,monospace;font-size:12.5px;background:var(--code);padding:8px 10px;border-radius:6px;overflow:auto;white-space:pre}
 .cmts{margin-top:12px;display:flex;flex-direction:column;gap:6px}
 .cmt{background:var(--soft);border-radius:8px;padding:8px 10px;font-size:13.5px}
 .cmt q{display:block;color:var(--muted);font-size:12.5px;quotes:"«" "»";margin-bottom:2px}
@@ -177,6 +179,8 @@ ins{background:var(--ins);text-decoration:none}
 @media (max-width:760px){.flow{flex-direction:column}.flow li{flex-direction:column}.flow li+li::before{content:"↓";align-self:flex-start;padding:4px 14px}.flow .n{max-width:none}.cmp{grid-template-columns:1fr}.stt{grid-template-columns:auto auto auto;}.stt .on{grid-column:1/-1;margin:-2px 0 6px}}
 .lead-q{color:var(--muted);font-size:12.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;margin:18px 0 4px}
 @media (max-width:760px){.mx{grid-template-columns:1fr!important}.mx .h{display:none}.mx .r{padding:10px 0 0}}
+.meta{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:12px;font-size:12.5px;color:var(--muted)}
+.meta code{font-size:12px;background:none;padding:0;color:var(--muted)}.meta b{color:var(--ink-2);font-weight:600;margin-right:4px;cursor:help}
 </style>
 </head>
 <body>
@@ -332,7 +336,7 @@ const R1 = [
 "tag": "Контракт · Следующий раунд",
 "title": "S12 · Старт следующего раунда",
 "tldr": "После любой отправки prepare начинает новый раунд, и каждый блок сразу получает понятный статус — видно, что перечитывать, а что уже согласовано.",
-"body": "<p>Новый раунд начинается после <b>любой</b> отправки — и с замечаниями, и после полного одобрения. Стартовый статус блока зависит от двух вещей: что ты сделал с ним в прошлом раунде и изменился ли его хеш.</p><p>Блок, которого раньше не было, приходит как «Not reviewed»; удалённый из документа исчезает. Если прошлый раунд закончился одобрением и правок не было, все блоки сразу «Approved in round K».</p>",
+"body": "<p>Новый раунд начинается после <b>любой</b> отправки — и с замечаниями, и после полного одобрения. Стартовый статус блока зависит от двух вещей: что ты сделал с ним в прошлом раунде и изменился ли его хеш.</p><ul><li>был одобрен, хеш тот же → «Approved in round K», делать ничего не нужно;</li><li>был одобрен, хеш изменился → «Changed after approval»: одобрение снято;</li><li>были комментарии, хеш изменился → «Changed»;</li><li>были комментарии, хеш тот же → «Not reviewed», а комментарии видны только для чтения;</li><li>нового блока раньше не было → «Not reviewed»; удалённый из документа исчезает.</li></ul><p>Если прошлый раунд закончился одобрением и правок не было, все блоки сразу «Approved in round K».</p>",
 "src": "- **S12** prepare after any submitted round N starts round N+1. Each block starts as follows. If it was approved\n  and its hash is unchanged, it stays approved, labelled \"Approved in round K\". If it was approved and its hash\n  changed, it is \"Changed after approval\". If it had comments and its hash changed, it is \"Changed\". If it had\n  comments and its hash is unchanged, it is \"Not reviewed\", with those comments shown read-only. A new block is\n  \"Not reviewed\", and a removed block is gone. After an `approved` round with no edits, every block is\n  \"Approved in round K\". — check: `npx playwright test tests/read/ui.spec.mjs`",
 "check": "Браузерный тест: <code>npx playwright test tests/read/ui.spec.mjs</code>",
 "diagram": {
@@ -426,7 +430,7 @@ const R1 = [
 "tag": "Контракт · Страница",
 "title": "S18 · Кнопка отправки",
 "tldr": "Кнопка всегда говорит, что будет: сколько осталось просмотреть, сколько комментариев уйдёт, или что документ одобрен.",
-"body": "<p>N в «Send N comments» — число комментариев текущего раунда. После отправки страница пишет, что ревью ушло и следующий раунд откроется в новой вкладке. Если сервера уже нет (завершился или был <code>drop</code>), ближайшее действие показывает «This review is closed» и выключает управление.</p>",
+"body": "<ul><li><b>«N to review»</b> — пока N блоков в статусе «Not reviewed» или «Changed»; кнопка выключена.</li><li><b>«Send N comments»</b> — когда непросмотренных не осталось, но есть комментарии; N — число комментариев текущего раунда.</li><li><b>«Approve document»</b> — когда одобрены все блоки.</li></ul><p>После отправки страница пишет, что ревью ушло и следующий раунд откроется в новой вкладке. Если сервера уже нет (завершился или был <code>drop</code>), ближайшее действие показывает «This review is closed» и выключает управление.</p>",
 "src": "- **S18** The submit button reads \"N to review\" and is disabled while N blocks are \"Not reviewed\" or \"Changed\".\n  It reads \"Send N comments\", N counting this round's comments, when none is pending and some have comments.\n  It reads \"Approve document\" when all are approved. After submitting, the page says the review was sent and\n  the next round opens in a new tab. When serve is gone (exited or dropped), the next action shows \"This review\n  is closed\" and disables the controls. — check: `npx playwright test tests/read/ui.spec.mjs`",
 "check": "Браузерный тест: <code>npx playwright test tests/read/ui.spec.mjs</code>",
 "diagram": {
@@ -449,7 +453,7 @@ const R1 = [
 "on": "сервер завершился или сделан drop"
 }
 ],
-"note": "Пока есть блоки «Not reviewed» или «Changed», кнопка выключена."
+"note": null
 }
 },
 {
@@ -539,66 +543,9 @@ const R1 = [
 "tag": "Архитектура",
 "title": "Файлы",
 "tldr": "Новый скилл skills/read/ едет вместе с плагином: CLI на Node без зависимостей и страница на чистом JS без сборки.",
-"body": "<p>Кеш плагина хранит дерево <code>skills/</code> как есть, поэтому всё лежит внутри скилла.</p>",
+"body": "<p>Всё лежит внутри <code>skills/read/</code>, потому что кеш плагина хранит дерево <code>skills/</code> как есть.</p><ul><li><code>SKILL.md</code> — сценарий сессии (ниже);</li><li><code>iar/iar.mjs</code> — CLI с командами <code>prepare</code>, <code>serve</code>, <code>drop</code>; Node ≥ 18, только встроенные модули;</li><li><code>iar/lib/parse.mjs</code> — правила нарезки и хеш;</li><li><code>iar/lib/state.mjs</code> — папка состояния, раунды, перенос статусов (S12), ответы, <code>drop</code>;</li><li><code>iar/lib/server.mjs</code> — HTTP (S5–S9);</li><li><code>iar/ui/</code> — <code>index.html</code>, <code>app.css</code>, <code>app.js</code>, <code>md.js</code>, <code>diff.js</code>, без сборки.</li></ul>",
 "src": "## Architecture\n### Files\n\nNew skill `skills/read/`, shipped with the plugin (the plugin cache holds the `skills/` tree):\n\n```\nskills/read/SKILL.md            the session flow below\nskills/read/iar/iar.mjs         CLI: prepare | serve | drop; Node >= 18, built-ins only\nskills/read/iar/lib/parse.mjs   Split rules + hash\nskills/read/iar/lib/state.mjs   state dir, rounds, carry (S12), replies, drop\nskills/read/iar/lib/server.mjs  HTTP (S5-S9)\nskills/read/iar/ui/             index.html, app.css, app.js, md.js, diff.js; vanilla, no build step\n```",
-"flag": "Рантайм — Node ≥ 18 без npm-зависимостей: агент выбрал сам (Python и Bun тоже были).",
-"diagram": {
-"type": "matrix",
-"caption": "Что где лежит в skills/read/",
-"cols": [
-"Что внутри"
-],
-"rows": [
-{
-"label": "SKILL.md",
-"cells": [
-{
-"text": "сценарий сессии (ниже)"
-}
-]
-},
-{
-"label": "iar/iar.mjs",
-"cells": [
-{
-"text": "CLI: `prepare` | `serve` | `drop`; Node ≥ 18, только встроенные модули"
-}
-]
-},
-{
-"label": "iar/lib/parse.mjs",
-"cells": [
-{
-"text": "правила нарезки и хеш"
-}
-]
-},
-{
-"label": "iar/lib/state.mjs",
-"cells": [
-{
-"text": "папка состояния, раунды, перенос статусов (S12), ответы, `drop`"
-}
-]
-},
-{
-"label": "iar/lib/server.mjs",
-"cells": [
-{
-"text": "HTTP (S5–S9)"
-}
-]
-},
-{
-"label": "iar/ui/",
-"cells": [
-{
-"text": "`index.html`, `app.css`, `app.js`, `md.js`, `diff.js`"
-}
-]
-}
-]
-}
+"flag": "Рантайм — Node ≥ 18 без npm-зависимостей: агент выбрал сам (Python и Bun тоже были)."
 },
 {
 "id": "architecture/state",
@@ -715,85 +662,9 @@ const R1 = [
 "id": "states",
 "tag": "Состояния",
 "title": "Состояния",
-"tldr": "Каждый неочевидный случай привязан к строке контракта, которая его решает.",
-"body": "",
-"src": "## States\n\n- Input:\n  - missing file, no `##`, bad or mismatched `--id`, not a git repository (S4);\n  - missing display (S5);\n  - Cyrillic, raw HTML and `javascript:` links (S21, S22), including inside diagrams (S23);\n  - a display entry that breaks the schema (S5);\n  - a block added or removed between rounds (S12);\n  - a renamed `##` heading changes only its section's first block (S2, Split rules).\n- Interaction:\n  - approve, un-approve, approve with comments (S15, S16);\n  - comment by selection or on the whole block, in each of the three kinds (S16);\n  - keyboard (Enter inside and outside the comment box) and topic click (S15);\n  - submit while blocks are pending (S9, S18);\n  - act after serve is gone (S18).\n- Time:\n  - reload, serve restart and a prepare rerun (S10);\n  - round N+1, also after an approved round (S12–S14);\n  - a block changed twice since its approval, which diffs against the last submit (S13);\n  - the operator answering in chat mid-review (S11, S27);\n  - waiting with no time limit (S27).\n- Environment:\n  - light, dark, system, and storage throwing (S19);\n  - ≤ 760 px (S20, S23);\n  - darwin and linux openers, and no opener (S6);\n  - Node missing or below 18 (S27).\n- Actors: another local process without the token (S6).\n- Load and limits: a one-block document (S1 with a minimal fixture inside prepare.test) and this spec's\n  40 blocks (S1, S15).",
-"diagram": {
-"type": "matrix",
-"caption": "Какие случаи решают какие строки",
-"cols": [
-"Случаи",
-"Строки"
-],
-"rows": [
-{
-"label": "Ввод",
-"cells": [
-{
-"text": "нет файла, нет `##`, плохой или чужой `--id`, не git-репозиторий; нет текста показа или он нарушает схему; кириллица, сырой HTML, `javascript:` (и в схемах); блок добавлен или удалён; переименован `##`"
-},
-{
-"text": "S4, S5, S21–S23, S12, S2"
-}
-]
-},
-{
-"label": "Действия",
-"cells": [
-{
-"text": "одобрить, снять одобрение, одобрить с комментариями; комментарий по выделению и ко всему блоку, три типа; Enter в поле и вне его, клик по теме; отправка раньше времени; действие без сервера"
-},
-{
-"text": "S15, S16, S9, S18"
-}
-]
-},
-{
-"label": "Время",
-"cells": [
-{
-"text": "перезагрузка, перезапуск serve, повторный prepare; раунд N+1, в том числе после одобрения; блок, изменённый дважды после одобрения (дифф против последней отправки); ответ в чат посреди ревью; ожидание без лимита"
-},
-{
-"text": "S10, S12–S14, S13, S11, S27"
-}
-]
-},
-{
-"label": "Окружение",
-"cells": [
-{
-"text": "светлая, тёмная, системная тема, хранилище бросает исключение; ≤ 760 px; open, xdg-open или ничего; Node нет или ниже 18"
-},
-{
-"text": "S19, S20, S23, S6, S27"
-}
-]
-},
-{
-"label": "Другие",
-"cells": [
-{
-"text": "чужой локальный процесс без токена"
-},
-{
-"text": "S6"
-}
-]
-},
-{
-"label": "Объём",
-"cells": [
-{
-"text": "документ из одного блока и эта спека из 41 блока"
-},
-{
-"text": "S1, S15"
-}
-]
-}
-]
-}
+"tldr": "Каждый неочевидный случай привязан к строке контракта, которая его решает: ввод, действия, время, окружение, другие процессы, объём.",
+"body": "<ul><li><b>Ввод</b>: нет файла, нет <code>##</code>, плохой или чужой <code>--id</code>, не git-репозиторий (S4); нет текста показа или он нарушает схему (S5); кириллица, сырой HTML и <code>javascript:</code>-ссылки (S21, S22), в том числе внутри схем (S23); блок добавлен или удалён между раундами (S12); переименованный <code>##</code> меняет только первый блок своего раздела (S2).</li><li><b>Действия</b>: одобрить, снять одобрение, одобрить с комментариями (S15, S16); комментарий по выделению и ко всему блоку, три типа (S16); Enter в поле комментария и вне его, клик по теме (S15); отправка раньше времени (S9, S18); действие, когда сервера уже нет (S18).</li><li><b>Время</b>: перезагрузка, перезапуск serve и повторный prepare (S10); раунд N+1, в том числе после одобрения (S12–S14); блок, изменённый дважды после одобрения, — дифф против последней отправки (S13); ответ в чат посреди ревью (S11, S27); ожидание без лимита (S27).</li><li><b>Окружение</b>: светлая, тёмная и системная тема, хранилище бросает исключение (S19); ≤ 760 px (S20, S23); <code>open</code>, <code>xdg-open</code> или ни одного (S6); Node нет или ниже 18 (S27).</li><li><b>Другие процессы</b>: чужой локальный процесс без токена (S6).</li><li><b>Объём</b>: документ из одного блока и эта спека из 41 блока (S1, S15).</li></ul>",
+"src": "## States\n\n- Input:\n  - missing file, no `##`, bad or mismatched `--id`, not a git repository (S4);\n  - missing display (S5);\n  - Cyrillic, raw HTML and `javascript:` links (S21, S22), including inside diagrams (S23);\n  - a display entry that breaks the schema (S5);\n  - a block added or removed between rounds (S12);\n  - a renamed `##` heading changes only its section's first block (S2, Split rules).\n- Interaction:\n  - approve, un-approve, approve with comments (S15, S16);\n  - comment by selection or on the whole block, in each of the three kinds (S16);\n  - keyboard (Enter inside and outside the comment box) and topic click (S15);\n  - submit while blocks are pending (S9, S18);\n  - act after serve is gone (S18).\n- Time:\n  - reload, serve restart and a prepare rerun (S10);\n  - round N+1, also after an approved round (S12–S14);\n  - a block changed twice since its approval, which diffs against the last submit (S13);\n  - the operator answering in chat mid-review (S11, S27);\n  - waiting with no time limit (S27).\n- Environment:\n  - light, dark, system, and storage throwing (S19);\n  - ≤ 760 px (S20, S23);\n  - darwin and linux openers, and no opener (S6);\n  - Node missing or below 18 (S27).\n- Actors: another local process without the token (S6).\n- Load and limits: a one-block document (S1 with a minimal fixture inside prepare.test) and this spec's\n  40 blocks (S1, S15)."
 },
 {
 "id": "references",
@@ -854,14 +725,28 @@ const DIAGRAMS={
 };
 function renderDiagram(d){const f=DIAGRAMS[d&&d.type];if(!f)return '';
   return `<figure class="dia" data-content style="margin:18px 0 6px">${d.caption?`<figcaption class="cap">${dt(d.caption)}</figcaption>`:''}${f(d)}${d.note?`<div class="note">${dt(d.note)}</div>`:''}</figure>`}
+function mdLite(src){const out=[];let para=[],list=null,code=null;
+  const inl=t=>t.replace(/`([^`]+)`/g,'<code>$1</code>').replace(/\*\*([^*]+)\*\*/g,'<b>$1</b>');
+  const flushP=()=>{if(para.length){out.push('<p>'+inl(para.join(' '))+'</p>');para=[]}};
+  const flushL=()=>{if(list){out.push('<ul>'+list.map(x=>'<li>'+inl(x)+'</li>').join('')+'</ul>');list=null}};
+  for(const raw of esc(src).split('\n')){
+    if(raw.trim().startsWith('```')){if(code){out.push('<pre class="code">'+code.join('\n')+'</pre>');code=null}else{flushP();flushL();code=[]}continue}
+    if(code){code.push(raw);continue}
+    const li=raw.match(/^\s*(?:[-*]|\d+\.) (.*)/);
+    if(li&&!/^\s{4,}/.test(raw)){flushP();(list=list||[]).push(li[1]);continue}
+    if(list&&/^\s+\S/.test(raw)){list[list.length-1]+=' '+raw.trim();continue}
+    const hd=raw.match(/^#{2,3} (.*)/);if(hd){flushP();flushL();out.push('<h4>'+inl(hd[1])+'</h4>');continue}
+    if(!raw.trim()){flushP();flushL();continue}
+    flushL();para.push(raw.trim())}
+  flushP();flushL();if(code)out.push('<pre class="code">'+code.join('\n')+'</pre>');return out.join('')}
 function trace(b){const c=COVERS[b.id];if(!c)return '';return `<dt>Covers</dt><dd>${c.map(o=>`<b>${o}</b> ${OUTCOMES[o]}`).join('<br>')}</dd>`}
 function content(b){return `
   <div class="tldr" data-sel="${b.id}">${b.tldr}</div>
   ${b.flag?`<div class="flag"><span class="lab">⚑ Agent's decision</span><span data-sel="${b.id}">${b.flag}</span></div>`:''}
   ${b.body?`<div class="body" data-sel="${b.id}">${b.body}</div>`:''}
   ${b.diagram?renderDiagram(b.diagram):''}
-  ${b.check||COVERS[b.id]?`<dl class="facts">${b.check?`<dt>Check</dt><dd data-sel="${b.id}">${b.check}</dd>`:''}${trace(b)}</dl>`:''}
-  ${showSrc.has(b.id)?`<div class="src">${esc(b.src)}</div>`:''}
+  ${b.check||COVERS[b.id]?`<div class="meta">${b.check?`<span data-sel="${b.id}">${b.check}</span>`:''}${COVERS[b.id]?`<span>covers ${COVERS[b.id].map(o=>`<b title="${OUTCOMES[o]}">${o}</b>`).join(' ')}</span>`:''}</div>`:''}
+  ${showSrc.has(b.id)?`<div class="src" data-content><span class="lab">Source</span>${mdLite(b.src)}</div>`:''}
   ${cmtsHtml(b.id)}`}
 function acts(b){const s=st[b.id].status;return `<div class="actions">
   <button class="btn ${s==='ok'?'ok':'primary'}" onclick="approve('${b.id}')">${s==='ok'?'✓ Approved':'Approve'} <span class="kbd">↵</span></button>
