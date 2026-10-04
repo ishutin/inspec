@@ -28,31 +28,34 @@ Prepare (CLI `skills/read/iar/iar.mjs`):
   the file's base name; a working directory outside a git repository. — check:
   `node --test --test-timeout=30000 tests/read/prepare.test.mjs`
 
-Serve (CLI and HTTP):
+Server and waiting (CLI and HTTP):
 
-- **S5** `serve --id …` with any block lacking a display entry, or with an entry that breaks the display schema
+- **S5** `open --id …` with any block lacking a display entry, or with an entry that breaks the display schema
   (a missing field, an unknown diagram type, a matrix row whose cells do not match its columns), exits 2
-  within 2 s, names every such block id on stderr, and opens no port. — check: `node --test --test-timeout=30000 tests/read/serve.test.mjs`
-- **S6** serve listens on 127.0.0.1 only, on a free port, and prints `inspec-read: <url>` as its first stdout
-  line, the url holding a token of 32 hex characters. A request whose path lacks the token gets 404. It runs
-  `open <url>` on darwin and `xdg-open <url>` on linux unless `--no-open`; with neither on `PATH` it still
-  serves. — check: `node --test --test-timeout=30000 tests/read/serve.test.mjs`
-- **S7** On a submit with every block approved, serve writes `result.json` as `{"result":"approved","round":N}`,
-  prints the same JSON as its last stdout line and exits 0 within 2 s. — check:
-  `node --test --test-timeout=30000 tests/read/serve.test.mjs`
-- **S8** On a submit with comments the result is `{"result":"changes_requested","round":N,"approved":[<ids>],
+  within 2 s, names every such block id on stderr, and opens nothing. — check: `node --test --test-timeout=30000 tests/read/server.test.mjs`
+- **S6** `open --id <slug>/<kind>` starts the repository's server when none is running, or reuses the running
+  one, prints `inspec-read: <url>` with url `http://127.0.0.1:<port>/<token>/<slug>/<kind>` and exits 0. The
+  server listens on 127.0.0.1 only; a request whose path lacks the token gets 404. `open` runs `open <url>` on
+  darwin and `xdg-open <url>` on linux unless `--no-open`; with neither on `PATH` it only prints. — check: `node --test --test-timeout=30000 tests/read/server.test.mjs`
+- **S7** The url of a document is the same across rounds, `prepare` reruns, `stop` and a new `open`: the port
+  and the 32-hex token are kept in `server.json` and reused; only when that port is taken by another process
+  does `open` pick a new one and print the new url. — check: `node --test --test-timeout=30000 tests/read/server.test.mjs`
+- **S8** `wait --id …` exits 0 within 2 s of a submit for the current round and prints the result as its last
+  stdout line, also written to `result.json`; the server keeps running. All approved gives
+  `{"result":"approved","round":N}`; with comments, `{"result":"changes_requested","round":N,"approved":[<ids>],
   "feedback":[{"block":<id>,"hash":<hash>,"comments":[{"id","quote","kind","text"}]}]}`, where `kind` is
   `change`, `question` or `unclear`, `quote` is `""` for a comment on the whole block, and only this round's
-  comments appear. It is printed and written the same way, exit 0. — check:
-  `node --test --test-timeout=30000 tests/read/serve.test.mjs`
-- **S9** A submit while any block is "Not reviewed" or "Changed" gets 409 and serve keeps running; a review
-  update naming an unknown block id or comment kind gets 400 and changes nothing. — check:
-  `node --test --test-timeout=30000 tests/read/serve.test.mjs`
-- **S10** Approvals and comments made on the page are still there after a page reload, a serve restart, and a
-  prepare rerun of the unchanged document followed by serve, all in the same round (O10). — check:
-  `npx playwright test tests/read/ui.spec.mjs`
-- **S11** `drop --id …` discards the current round's unsent statuses and comments; the next serve shows the
-  round as prepare left it (O12). — check: `node --test --test-timeout=30000 tests/read/serve.test.mjs`
+  comments appear. When the current round was already submitted while nobody waited, `wait` prints its result
+  at once. — check: `node --test --test-timeout=30000 tests/read/server.test.mjs`
+- **S9** A submit while any block is "Not reviewed" or "Changed" gets 409; a review update naming an unknown
+  block id or comment kind gets 400 and changes nothing. — check: `node --test --test-timeout=30000 tests/read/server.test.mjs`
+- **S10** Approvals and comments made on the page are still there after a page reload, a server `stop` and
+  `open`, and a prepare rerun of the unchanged document, all in the same round (O10). — check: `npx playwright test tests/read/ui.spec.mjs`
+- **S11** `drop --id …` discards the current round's unsent statuses and comments; the page then shows the
+  round as prepare left it (O12). — check: `node --test --test-timeout=30000 tests/read/server.test.mjs`
+- **S28** One server serves several documents at once, each at its own url, and `/<token>/` lists every
+  document in the state directory with its slug, kind, round and status as links. The server exits after 8 hours
+  with no request; a visible page polls every 3 s, so an open tab keeps it alive. — check: `node --test --test-timeout=30000 tests/read/server.test.mjs`
 
 Next round:
 
@@ -89,8 +92,9 @@ Page (`skills/read/iar/ui/`), judged against `mockup.html`:
 - **S18** The submit button reads "N to review" and is disabled while N blocks are "Not reviewed" or "Changed".
   It reads "Send N comments", N counting this round's comments, when none is pending and some have comments.
   It reads "Approve document" when all are approved. After submitting, the page says the review was sent and
-  the next round opens in a new tab. When serve is gone (exited or dropped), the next action shows "This review
-  is closed" and disables the controls. — check: `npx playwright test tests/read/ui.spec.mjs`
+  that it waits for the session; when the next round is prepared, the same tab switches to it within 5 s with
+  no reload. When the server cannot be reached, the page shows "Reconnecting…" with the command that starts it
+  again (`/inspec:read <slug> <kind>`), disables the controls, and recovers within 5 s of the server's return. — check: `npx playwright test tests/read/ui.spec.mjs`
 - **S19** Theme: System follows `prefers-color-scheme`, Light and Dark override it, the choice survives a reload,
   and with storage throwing the page still renders in System; the body background and text colours differ
   between the light and dark captures. — check: `npx playwright test tests/read/ui.spec.mjs`
@@ -127,8 +131,9 @@ Skills and docs:
   and condition kept and nothing added, and diagrams appear only where they show the content better;
   `/inspec:read <slug>` with no kind opens the newest document; the display texts are written by one subagent
   and are absent from the session's own context; the operator writing in chat while the
-  page is open makes the session stop serve and run drop; with `node` missing or below 18 the skill says so and
-  continues in chat. — qa
+  page is open makes the session stop `wait` and run drop; with `node` missing or below 18 the skill says so and
+  continues in chat; on Windows with Node 18+ the page opens and the whole scenario runs; after a machine
+  restart the tab left open reconnects once `/inspec:read` runs again. — qa
 
 ## Architecture
 
@@ -138,16 +143,17 @@ New skill `skills/read/`, shipped with the plugin (the plugin cache holds the `s
 
 ```
 skills/read/SKILL.md            the session flow below
-skills/read/iar/iar.mjs         CLI: prepare | serve | drop; Node >= 18, built-ins only
+skills/read/iar/iar.mjs         CLI: prepare | open | wait | drop | stop; Node >= 18, built-ins only
 skills/read/iar/lib/parse.mjs   Split rules + hash
 skills/read/iar/lib/state.mjs   state dir, rounds, carry (S12), replies, drop
-skills/read/iar/lib/server.mjs  HTTP (S5-S9)
+skills/read/iar/lib/server.mjs  the repository's server (S5-S9, S28)
 skills/read/iar/ui/             index.html, app.css, app.js, md.js, diff.js; vanilla, no build step
 ```
 
 ### State
 
-Outside the tree, per document: `$(git rev-parse --git-dir)/inspec-read/<slug>/<kind>/`:
+Outside the tree, per document: `$(git rev-parse --git-common-dir)/inspec-read/<slug>/<kind>/` (the common dir,
+so every worktree of the repository shares one server and one state):
 - `blocks.json`: `{doc, kind, lang, round, blocks:[{id, section, group, source, hash}]}`.
 - `display/<hash>.<lang>.json`: written by the session.
   `{section, title, tldr, body, check, flag, covers, diagram}`:
@@ -208,17 +214,23 @@ prepare starts round N+1 when `result.json` holds round N. Otherwise it rebuilds
 `review.json` entries whose hash is unchanged. Carry follows S12. `prevHash` is the hash at the last submit, and
 `diff.js` diffs `display/<prevHash>` against the new display word by word (LCS).
 
-### HTTP
+### Server and HTTP
 
-`server.mjs`, all routes under `/<token>/`:
-- `GET /`: the page and its assets.
-- `GET api/doc`: `{doc, kind, lang, round, blocks:[{id, section, source, hash, display, prevDisplay}], review}`.
-- `PUT api/review`: the page sends the whole review on each change. Returns 400 on an unknown id or kind,
-  else 204.
-- `POST api/submit`: returns 409 while blocks are pending, else 200. serve then writes and prints the result
-  and exits.
+One server per repository, `lib/server.mjs`, started by `open` as a detached process that outlives the
+session. `<git-common-dir>/inspec-read/server.json` holds `{port, token, pid}`. The port is the first free one from
+47100 up on the first start, then the same one on every start. All routes are under `/<token>/`:
+- `GET /`: the document list (S28).
+- `GET <slug>/<kind>`: the page and its assets.
+- `GET api/<slug>/<kind>/doc`: `{doc, kind, lang, round, blocks:[{id, section, source, hash, display,
+  prevDisplay}], review}`. The page polls it every 3 s while visible and re-renders when `round` changes.
+- `PUT api/<slug>/<kind>/review`: the page sends the whole review on each change. Returns 400 on an unknown id
+  or kind, else 204.
+- `POST api/<slug>/<kind>/submit`: returns 409 while blocks are pending, else writes `result.json` and returns
+  200.
 
-The opener is `open` on darwin and `xdg-open` on linux. If the opener fails, serve only prints the url.
+`wait` watches `result.json` for the current round. `stop` ends the server. The opener is `open` on darwin,
+`xdg-open` on linux and `cmd /c start "" <url>` on win32; if it fails, the url is only printed. Every path is
+built with `node:path`.
 
 ### Session flow
 
@@ -233,12 +245,13 @@ operator picks the review there.
    start one `general-purpose` subagent (no model override) with the printed blocks, `lang`, the intent's path,
    the display rules of State, and the flags as a list of block id and text (only the session knows them). The
    subagent writes every `display/<hash>.<lang>.json` and replies with the ids it wrote, so the texts stay out
-   of the session's context. If serve then refuses an entry (S5), the same subagent is asked again for those
+   of the session's context. If `open` then refuses an entry (S5), the same subagent is asked again for those
    ids only.
-5. Run `serve` with Bash `run_in_background: true`. The harness wakes the session when it exits.
+5. Run `open`, then `wait` with Bash `run_in_background: true`. The harness wakes the session when `wait`
+   exits.
 6. On `approved`, the document is agreed. On `changes_requested`, edit through the owning skill (spec.md only
    through `/inspec:spec`), write `replies.json` for the questions, and go to 4.
-7. If the operator writes in chat first, stop the background task, run `drop`, and act on the chat.
+7. If the operator writes in chat first, stop the `wait` task, run `drop`, and act on the chat.
 
 ### Offer placement
 
@@ -258,7 +271,7 @@ find it.
 - `tests/read/fixtures/`: copies of this feature's `intent.md` and `spec.md` as committed, `spec.ids`, and a
   `plan.md` holding the plan template's two deliveries.
 
-Tests run serve with `--no-open` in a temporary git repository. The opener test puts recording `open` and
+Tests run `open` with `--no-open` in a temporary git repository and `stop` the server after each test. The opener test puts recording `open` and
 `xdg-open` scripts first on `PATH`.
 
 ## Touches
@@ -288,9 +301,10 @@ Tests run serve with `--no-open` in a temporary git repository. The opener test 
   - comment by selection or on the whole block, in each of the three kinds (S16);
   - keyboard (Enter inside and outside the comment box) and topic click (S15);
   - submit while blocks are pending (S9, S18);
-  - act after serve is gone (S18).
+  - act while the server is unreachable (S18).
 - Time:
-  - reload, serve restart and a prepare rerun (S10);
+  - reload, server stop and start, and a prepare rerun (S10);
+  - a submit while no session waits (S8); 8 hours without requests (S28);
   - round N+1, also after an approved round (S12–S14);
   - a block changed twice since its approval, which diffs against the last submit (S13);
   - the operator answering in chat mid-review (S11, S27);
@@ -298,9 +312,10 @@ Tests run serve with `--no-open` in a temporary git repository. The opener test 
 - Environment:
   - light, dark, system, and storage throwing (S19);
   - ≤ 760 px (S20, S23);
-  - darwin and linux openers, and no opener (S6);
+  - darwin and linux openers, and no opener (S6); Windows (S27);
   - Node missing or below 18 (S27).
-- Actors: another local process without the token (S6).
+- Actors: another local process without the token (S6); another process on the stored port (S7); two
+  documents open at once (S28).
 - Load and limits: a one-block document (S1 with a minimal fixture inside prepare.test) and this spec's
   41 blocks (S1, S15).
 
@@ -317,9 +332,8 @@ Tests run serve with `--no-open` in a temporary git repository. The opener test 
 
 - Splitting a section further than its id items, `###` subsections and prose runs.
 - Agent's-decision flags in a session that did not write the document.
-- Windows: no opener is run there; the url is printed.
 - Several reviewers, sharing, remote hosting.
-- One server across rounds: each round is a new serve and a new tab.
+- Reaching the server from another machine.
 
 ## Open
 

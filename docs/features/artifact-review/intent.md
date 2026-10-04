@@ -48,8 +48,10 @@ The operator: the one person running an inspec session on their own machine, at 
   marked "changed after approval".
 - **O9 Same text unless edited.** A block's summary and translation stay word for word the same between rounds
   unless its original text changed.
-- **O10 Nothing lost.** Closing the tab or reloading keeps approvals and draft comments; reopening shows the
-  same round where they left it.
+- **O10 Nothing lost, one link.** Closing the tab or reloading keeps approvals and draft comments. Each
+  document has one link that stays the same across rounds and restarts: an open tab follows the next round by
+  itself, shows that it is reconnecting while the tool is down, and comes back when it runs again. Any document
+  can be opened at any time with `/inspec:read`. It works on macOS, Linux and Windows wherever Node runs.
 - **O11 Theme.** The interface follows the system theme, and the operator can force light or dark; the choice
   is remembered.
 - **O12 Waiting.** While the review is open the session waits for it, with no time limit. If the operator
