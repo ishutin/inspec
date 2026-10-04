@@ -225,11 +225,14 @@ export function applyReview(dir, body) {
   const s = load(dir);
   if (!body || typeof body !== 'object' || typeof body.blocks !== 'object' || !body.blocks) throw 'review must be {round, blocks}';
   if (body.round !== undefined && body.round !== s.round) throw `review is for round ${body.round}, current is ${s.round}`;
+  if (body.summary !== undefined && (!body.summary || typeof body.summary !== 'object')) throw 'summary must be {comments}';
   const next = structuredClone(s.review);
-  for (const [id, b] of Object.entries(body.blocks)) {
-    const cur = next.blocks[id];
+  // The summary (S31) takes comments only, after the blocks; it has no status.
+  const targets = Object.entries(body.blocks).map(([id, b]) => [id, b, next.blocks[id]]);
+  if (body.summary !== undefined) targets.push(['summary', { comments: body.summary.comments }, next.summary]);
+  for (const [id, b, cur] of targets) {
     if (!cur) throw `unknown block id: ${id}`;
-    if (b.status !== undefined && !STATUSES.includes(b.status)) throw `unknown status for ${id}: ${b.status}`;
+    if (b.status !== undefined && (id === 'summary' || !STATUSES.includes(b.status))) throw `unknown status for ${id}: ${b.status}`;
     if (b.comments !== undefined && !Array.isArray(b.comments)) throw `comments of ${id} must be a list`;
     const mine = (b.comments || []).filter((c) => c && (c.round === undefined || c.round === s.round));
     for (const c of mine) {
@@ -246,7 +249,7 @@ export function applyReview(dir, body) {
       const earlier = cur.comments.filter((c) => c.round !== s.round);
       let n = 0;
       const pre = `c${s.round}-`;
-      for (const bl of Object.values(next.blocks)) {
+      for (const bl of [...Object.values(next.blocks), next.summary]) {
         for (const c of bl.comments) if (String(c.id).startsWith(pre)) n = Math.max(n, Number(c.id.slice(pre.length)) || 0);
       }
       for (const c of mine) if (typeof c.id === 'string' && c.id.startsWith(pre)) n = Math.max(n, Number(c.id.slice(pre.length)) || 0);
@@ -276,6 +279,10 @@ export function drop(dir) {
         ? start.blocks[b.id]
         : { ...freshEntry(b.hash), comments: (cur?.comments || []).filter((c) => c.round !== s.round) };
   }
+  review.summary =
+    start && start.round === s.round && start.summary
+      ? { ...start.summary, hash: s.review.summary.hash }
+      : { hash: s.review.summary.hash, comments: s.review.summary.comments.filter((c) => c.round !== s.round) };
   writeJSON(path.join(dir, 'review.json'), review);
   return true;
 }
@@ -288,16 +295,21 @@ export function submit(dir) {
   if (pending.length) return { code: 409, error: `not reviewed: ${pending.join(', ')}` };
   const entries = s.blocks.map((b) => [b.id, s.review.blocks[b.id]]);
   const approved = entries.filter(([, e]) => e.status === 'ok').map(([id]) => id);
+  // Comments on the summary never block a submit and come first, as a remark on the whole document (S31).
+  const sum = s.review.summary;
+  const sumComments = sum.comments.filter((c) => c.round === s.round).map(({ id: cid, quote, kind, text }) => ({ id: cid, quote, kind, text }));
   let result;
-  if (approved.length === entries.length) result = { result: 'approved', round: s.round };
+  if (approved.length === entries.length && !sumComments.length) result = { result: 'approved', round: s.round };
   else {
-    const feedback = entries
+    const feedback = (sumComments.length ? [{ block: 'summary', hash: sum.hash, comments: sumComments }] : []).concat(
+      entries
       .map(([id, e]) => ({
         block: id,
         hash: e.hash,
         comments: e.comments.filter((c) => c.round === s.round).map(({ id: cid, quote, kind, text }) => ({ id: cid, quote, kind, text })),
       }))
-      .filter((f) => f.comments.length);
+      .filter((f) => f.comments.length),
+    );
     result = { result: 'changes_requested', round: s.round, approved, feedback };
   }
   writeJSON(path.join(dir, 'result.json'), result);

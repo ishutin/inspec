@@ -1,8 +1,24 @@
 // The review page (spec rows S10, S15, S16, S17, S18, S19, S20, S21, S22, S23), driven in Chromium against a real server.
-import { test, expect } from '@playwright/test';
+import { test as base, expect } from '@playwright/test';
 import fs from 'node:fs';
 import path from 'node:path';
 import { mkRepo, docPath, stateDir, iar, prepare, readJSON } from './helpers.mjs';
+
+// The page opens on the document summary (S30); these rows are about the blocks, so every load here goes on
+// with Start review, as the operator does. The summary screen itself is tests/read/summary.spec.mjs.
+const test = base.extend({
+  page: async ({ page }, use) => {
+    const goto = page.goto.bind(page);
+    const reload = page.reload.bind(page);
+    const start = async (r) => {
+      await page.locator('.card [data-act="start"]').click();
+      return r;
+    };
+    page.goto = async (...a) => start(await goto(...a));
+    page.reload = async (...a) => start(await reload(...a));
+    await use(page);
+  },
+});
 
 const CYR = /[Ѐ-ӿ]/;
 const SECTIONS_RU = { Overview: 'Обзор', Contract: 'Контракт', Architecture: 'Архитектура', Touches: 'Затрагивает', States: 'Состояния', References: 'Ссылки', 'Not in scope': 'Вне рамок', Open: 'Открытые вопросы' };
@@ -56,7 +72,7 @@ function setup(kind, make = en) {
   const blocks = prepare(repo, kind);
   for (const b of blocks) writeDisplay(b, make(b));
   const url = openUrl(repo, kind);
-  const d = { repo, kind, url, api: url.replace(`/demo/${kind}`, `/api/demo/${kind}`), blocks };
+  const d = { repo, kind, url, api: url.replace(`/demo/${kind}`, `/api/demo/${kind}`), blocks: blocks.filter((b) => b.id !== 'summary') };
   docs.push(d);
   return d;
 }
@@ -408,8 +424,15 @@ test('S21 with Russian display text, no Cyrillic outside [data-content]; the int
 
   // The chrome is English.
   for (const name of ['Approve', 'Comment on block', 'Hide source']) await expect(card(page).getByRole('button', { name })).toBeVisible();
-  await expect(page.locator('#submit')).toHaveText('41 to review');
+  await expect(page.locator('#submit')).toHaveText('46 to review');
   await expect(page.locator('#themeSeg button')).toHaveText(['System', 'Light', 'Dark']);
+
+  // The summary screen (S30): its Russian texts inside [data-content], its chrome English.
+  await page.locator('.F .toc a.sum').click();
+  await expect(card(page).locator('h2')).toHaveText('About this document');
+  await expect(card(page).locator('.tldr')).toHaveText('Кратко о блоке summary.');
+  expect(await outside()).toEqual([]);
+  for (const name of ['Start review', 'Comment on document']) await expect(card(page).getByRole('button', { name })).toBeVisible();
 });
 
 test('S22 display markdown renders as elements; raw HTML, scripts and javascript: links stay inert', async ({ page }) => {
@@ -727,7 +750,7 @@ test('S19 theme: System follows the scheme, Light and Dark override it and survi
   p2.on('pageerror', (e) => errors.push(e.message));
   await p2.goto(d.url);
   await expect(p2.locator('.toc a.topic')).toHaveCount(2);
-  await expect(p2.locator('.card h2')).toHaveText('Name of D1');
+  await expect(p2.locator('.card h2')).toHaveText('About this document');
   await expect(on(p2)).toHaveText('System');
   expect(await colours(p2)).toEqual(dark);
   await p2.locator('#themeSeg').getByRole('button', { name: 'Light' }).click();
@@ -806,7 +829,7 @@ const vDisplay = (b) => ({
 // Writes rows as docs/features/demo/spec.md, prepares it and writes the displays it asks for.
 function round(d, rows) {
   fs.writeFileSync(docPath(d.repo, 'spec'), rowsDoc(rows));
-  for (const b of prepare(d.repo, 'spec')) writeDisplay(b, vDisplay(b));
+  for (const b of prepare(d.repo, 'spec')) writeDisplay(b, b.id === 'summary' ? { tldr: 'The rows.', body: 'Rows one to five.', diagram: null } : vDisplay(b));
 }
 
 function setupRows() {

@@ -175,3 +175,14 @@ mark.cm.old{background:none;border-bottom-style:dashed}
   .F .toc a .tt{overflow:visible}
   .card{overflow-wrap:anywhere}
 }
+/* the summary screen (S30-S32) */
+.F .toc a.sum{margin-bottom:4px}
+.changes{margin-top:20px;padding-top:14px;border-top:1px solid var(--line);font-size:14px;line-height:1.55;color:var(--ink-2)}
+.changes .lab{display:block;color:var(--muted);font-size:11.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;margin-bottom:6px}
+.changes ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.changes li{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px}
+.changes a{color:var(--accent);cursor:pointer;font-weight:550}
+.changes .why{font-size:12.5px;color:var(--muted)}
+.changes q{color:var(--ink-2);quotes:"«" "»"}
+.changes .reply{flex-basis:100%;color:var(--muted);font-size:13.5px;padding-left:12px;border-left:2px solid var(--line)}
+.changes p{margin:0;color:var(--muted)}

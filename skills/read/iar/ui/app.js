@@ -1,5 +1,6 @@
 // The review page: topic list, focus card, keyboard, approve, comments by selection or on the block, submit,
-// 3 s polling, round switch, Reconnecting…, theme, narrow layout and diagrams (spec S10, S15–S23).
+// 3 s polling, round switch, Reconnecting…, theme, narrow layout and diagrams (spec S10, S15–S23), and the
+// document summary screen before the first block (S30–S32).
 // Every display text goes through md.js and sits inside [data-content]; the chrome is English.
 import { esc, inline, block, code } from './md.js';
 import { diffInto } from './diff.js';
@@ -17,7 +18,8 @@ const $ = (id) => document.getElementById(id);
 let doc = null; // the last payload adopted from the server
 let review = null; // the page's working copy of doc.review
 let seen = ''; // the last payload as received, to notice any change on the server (a drop, a prepare, a new round)
-let cur = 0;
+const SUM = -1; // `cur` on the summary screen
+let cur = SUM;
 const showSrc = new Set();
 let online = true;
 let sent = false;
@@ -58,6 +60,10 @@ const own = (c) => c.round === undefined || c.round === doc.round;
 const entry = (id) => (review.blocks[id] ||= { status: 'new', comments: [] });
 const mine = (e) => e.comments.filter(own);
 const canEdit = () => doc && online && !sent;
+const onSum = () => cur === SUM;
+// The summary takes comments only: no status, no approval, never counted in progress (S30, S31).
+const sumEntry = () => (review.summary ||= { comments: [] });
+const target = () => (onSum() ? sumEntry() : entry(doc.blocks[cur].id));
 const disp = (b) => b.display || { section: b.section, title: b.id, tldr: '', body: '', check: null, flag: null, covers: [], diagram: null };
 
 function nextOpen(i) {
@@ -75,7 +81,17 @@ function change() {
   push();
 }
 
+// Start review, and Enter on the summary: the first block not approved (the first block when all are).
+function startReview() {
+  if (!doc || !doc.blocks.length || ask) return;
+  const j = nextOpen(SUM);
+  cur = j === SUM ? 0 : j;
+  closePop();
+  render();
+}
+
 function approve() {
+  if (onSum()) return startReview();
   if (!canEdit() || ask) return;
   const id = doc.blocks[cur].id;
   const e = entry(id);
@@ -123,9 +139,9 @@ function closeAsk() {
 
 function removeComment(k) {
   if (!canEdit()) return;
-  const e = entry(doc.blocks[cur].id);
+  const e = target();
   e.comments.splice(k, 1);
-  if (!mine(e).length && e.status === 'cm') e.status = 'new';
+  if (!onSum() && !mine(e).length && e.status === 'cm') e.status = 'new';
   change();
 }
 
@@ -136,7 +152,8 @@ function body() {
     const e = entry(b.id);
     blocks[b.id] = { status: e.status, comments: mine(e).map(({ id, quote, kind: k, text }) => ({ id, quote, kind: k, text })) };
   }
-  return JSON.stringify({ round: doc.round, blocks });
+  const summary = { comments: mine(sumEntry()).map(({ id, quote, kind: k, text }) => ({ id, quote, kind: k, text })) };
+  return JSON.stringify({ round: doc.round, blocks, summary });
 }
 
 function push() {
@@ -176,6 +193,7 @@ async function flush() {
 }
 
 function adopt(p, raw) {
+  const wasSum = onSum();
   const id = doc && doc.blocks[cur] && doc.blocks[cur].id;
   const newRound = !doc || doc.round !== p.round;
   doc = p;
@@ -187,9 +205,9 @@ function adopt(p, raw) {
     showSrc.clear();
     closePop();
     closeAsk();
-    const i = p.blocks.findIndex((b) => entry(b.id).status !== 'ok');
-    cur = i < 0 ? 0 : i;
-  } else {
+    // Every round opens on the summary, which from round 2 lists what changed (S30, S32).
+    cur = SUM;
+  } else if (!wasSum) {
     const i = p.blocks.findIndex((b) => b.id === id);
     cur = i >= 0 ? i : Math.max(0, Math.min(cur, p.blocks.length - 1));
   }
@@ -302,7 +320,7 @@ function diagram(g) {
 function toc() {
   let section = null;
   let group = null;
-  return doc.blocks
+  return `<a class="sum${onSum() ? ' cur' : ''}" data-id="summary"><span class="tt">Summary</span></a>${doc.blocks
     .map((b, i) => {
       const d = disp(b);
       let h = '';
@@ -315,7 +333,50 @@ function toc() {
       group = b.group;
       return `${h}<a class="topic${i === cur ? ' cur' : ''}" data-id="${esc(b.id)}" data-i="${i}"><span class="dot ${esc(entry(b.id).status)}"></span><span class="tt" data-content>${inline(d.title)}</span>${d.flag ? '<span class="fl" title="Agent\'s decision">⚑</span>' : ''}</a>`;
     })
-    .join('');
+    .join('')}`;
+}
+
+// From round 2: every block whose hash changed since the last submit ("Changed", "Changed after approval") and
+// every comment of that round with an agent reply, each a link to its block (S32). The summary's own answered
+// comments show on this same screen, under it.
+function changes() {
+  if (doc.round < 2) return '';
+  const K = doc.round - 1;
+  const items = [];
+  doc.blocks.forEach((b, i) => {
+    const e = entry(b.id);
+    const link = `<a data-go="${i}" data-content>${inline(disp(b).title)}</a>`;
+    if (e.prevHash && e.prevHash !== b.hash) items.push(`<li>${link}<span class="st chg">${e.wasApproved ? 'Changed after approval' : 'Changed'}</span></li>`);
+    for (const c of e.comments) {
+      if (c.round === K && c.reply) {
+        items.push(`<li>${link}<span class="why">answered</span><q data-content>${esc(c.text)}</q><div class="reply"><b>Agent</b> <span data-content>${esc(c.reply)}</span></div></li>`);
+      }
+    }
+  });
+  return `<div class="changes"><span class="lab">Changed since round ${K}</span>${items.length ? `<ul>${items.join('')}</ul>` : `<p>No block changed and no comment was answered.</p>`}</div>`;
+}
+
+function summaryCard() {
+  const s = (doc.summary && doc.summary.display) || { tldr: '', body: '', diagram: null };
+  const off = canEdit() ? '' : ' disabled';
+  const left = doc.blocks.filter((x) => entry(x.id).status !== 'ok').length;
+  return `<div class="stage">
+  ${sent ? '<div class="notice" id="notice"><b>Review sent.</b> Waiting for the session to read it; this tab switches to the next round when it is ready.</div>' : ''}
+  <div class="card sum" data-block="summary">
+    <div class="hd"><span class="tag">Summary · ${doc.blocks.length} block${doc.blocks.length === 1 ? '' : 's'}</span></div>
+    <h2>About this document</h2>
+    ${s.tldr ? `<div class="tldr" data-content data-sel="summary">${inline(s.tldr)}</div>` : ''}
+    ${s.body ? `<div class="body" data-content data-sel="summary">${block(s.body)}</div>` : ''}
+    ${diagram(s.diagram)}
+    ${changes()}
+    ${comments(sumEntry())}
+    <div class="actions">
+      <button class="btn primary" data-act="start">Start review <span class="kbd">↵</span></button>
+      <button class="btn" data-act="comment"${off}>Comment on document <span class="kbd">C</span></button>
+    </div>
+  </div>
+  <div class="nav"><span><span class="kbd">↵</span> start review · <span class="kbd">C</span> comment</span><span>${left} left</span></div>
+</div>`;
 }
 
 function comments(e) {
@@ -330,6 +391,7 @@ function comments(e) {
 }
 
 function focusCard() {
+  if (onSum()) return summaryCard();
   const bs = doc.blocks;
   const b = bs[cur];
   const d = disp(b);
@@ -374,7 +436,7 @@ function header() {
   const ok = count('ok');
   const cm = count('cm');
   const pending = count('new') + count('chg');
-  const notes = bs.reduce((a, b) => a + mine(entry(b.id)).length, 0);
+  const notes = bs.reduce((a, b) => a + mine(entry(b.id)).length, mine(sumEntry()).length);
   $('docname').textContent = `${slug} · ${kind}.md`;
   $('round').textContent = `Round ${doc.round}`;
   $('barOk').style.width = `${(ok / n) * 100}%`;
@@ -442,9 +504,9 @@ function diffs() {
 // and its whitespace may differ from the text nodes' (a selection across lines), so both are compared collapsed.
 function highlight() {
   const c = document.querySelector('.card');
-  if (!c || !doc.blocks[cur]) return;
+  if (!c || (!onSum() && !doc.blocks[cur])) return;
   const fields = [...c.querySelectorAll('[data-sel]')];
-  for (const cm of entry(doc.blocks[cur].id).comments) {
+  for (const cm of target().comments) {
     const q = (cm.quote || '').replace(/\s+/g, ' ').trim();
     if (q) fields.some((el) => paint(el, q, own(cm)));
   }
@@ -546,7 +608,7 @@ function closePop() {
 function openComment(quote = '', rect = null) {
   if (!canEdit() || ask) return;
   closePop();
-  const id = doc.blocks[cur].id;
+  const id = onSum() ? 'summary' : doc.blocks[cur].id;
   const r = rect || document.querySelector('.card [data-act="comment"]').getBoundingClientRect();
   let k = 'change';
   pop = document.createElement('div');
@@ -571,9 +633,9 @@ function openComment(quote = '', rect = null) {
   const save = () => {
     const text = ta.value.trim();
     if (!text || !canEdit()) return;
-    const e = entry(id);
+    const e = id === 'summary' ? sumEntry() : entry(id);
     e.comments.push({ quote, kind: k, text, round: doc.round });
-    e.status = 'cm';
+    if (id !== 'summary') e.status = 'cm';
     closePop();
     change();
   };
@@ -583,23 +645,24 @@ function openComment(quote = '', rect = null) {
 // ---------- events ----------
 function move(step) {
   if (!doc || !doc.blocks.length) return;
-  cur = Math.max(0, Math.min(doc.blocks.length - 1, cur + step));
+  cur = Math.max(SUM, Math.min(doc.blocks.length - 1, cur + step));
   closePop();
   render();
 }
 
 document.addEventListener('click', (ev) => {
   if (!doc) return;
-  const t = ev.target.closest('.F .toc a.topic, .card [data-act]');
+  const t = ev.target.closest('.F .toc a.topic, .F .toc a.sum, .card [data-act], .card [data-go]');
   if (!t) return;
-  if (t.matches('a.topic')) {
-    cur = Number(t.dataset.i);
+  if (t.matches('a.topic, a.sum, [data-go]')) {
+    cur = t.matches('a.sum') ? SUM : Number(t.dataset.i ?? t.dataset.go);
     closePop();
     render();
     return;
   }
   const act = t.dataset.act;
   if (act === 'approve') approve();
+  else if (act === 'start') startReview();
   else if (act === 'comment') openComment();
   else if (act === 'source') {
     const id = doc.blocks[cur].id;
