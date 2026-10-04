@@ -350,9 +350,10 @@ test('S18 the submit button, the sent state, the next round and Reconnecting…'
   expect(sent).toMatchObject({ result: 'changes_requested', round: 1, approved: ['D1'] });
   expect(sent.feedback[0].comments.map((c) => [c.kind, c.text])).toEqual([['change', 'First comment'], ['question', 'Second comment']]);
 
-  // The next round: the same tab switches within 5 s, with no reload.
+  // The next round: the same tab switches within 5 s of `open` publishing it (S34), with no reload.
   fs.appendFileSync(docPath(d.repo, 'plan'), '\nOne more line.\n');
   for (const b of prepare(d.repo, 'plan')) writeDisplay(b, en(b));
+  openUrl(d.repo, 'plan');
   await expect(page.locator('#round')).toHaveText('Round 2', { timeout: 5000 });
   expect(await page.evaluate(() => window.__sameTab)).toBe(true);
   await expect(page.locator('#notice')).toBeHidden();
@@ -603,6 +604,7 @@ test('S16 comment on a selection with a kind, its highlight, and approve asking 
   expect((await fetch(`${d.api}/submit`, { method: 'POST' })).status).toBe(200);
   fs.appendFileSync(docPath(d.repo, 'plan'), '\nOne more line.\n');
   for (const b of prepare(d.repo, 'plan')) writeDisplay(b, en(b));
+  openUrl(d.repo, 'plan');
   const file = `${stateDir(d.repo, 'plan')}/review.json`;
   const rv = readJSON(file);
   expect(rv.round).toBe(2);
@@ -830,6 +832,8 @@ const vDisplay = (b) => ({
 function round(d, rows) {
   fs.writeFileSync(docPath(d.repo, 'spec'), rowsDoc(rows));
   for (const b of prepare(d.repo, 'spec')) writeDisplay(b, b.id === 'summary' ? { tldr: 'The rows.', body: 'Rows one to five.', diagram: null } : vDisplay(b));
+  // A next round shows once `open` publishes it (S34).
+  if (d.url) openUrl(d.repo, 'spec');
 }
 
 function setupRows() {

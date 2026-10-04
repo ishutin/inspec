@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { UsageError, parseId, checkLang, rootDir, ensureRoot, docDir, prepare, load, badDisplays, drop, readJSON } from './lib/state.mjs';
+import { UsageError, parseId, checkLang, rootDir, ensureRoot, docDir, prepare, load, badDisplays, publish, drop, readJSON } from './lib/state.mjs';
 
 const SERVER = path.join(path.dirname(fileURLToPath(import.meta.url)), 'lib', 'server.mjs');
 const USAGE = `usage:
@@ -110,6 +110,7 @@ const commands = {
       throw new UsageError(`display entries missing or breaking the schema, nothing opened:\n${bad.map((b) => `  ${b.id}: ${b.reason}`).join('\n')}`);
     }
     const srv = await ensureServer(root);
+    publish(dir);
     const url = `http://127.0.0.1:${srv.port}/${srv.token}/${slug}/${kind}`;
     process.stdout.write(`inspec-read: ${url}\n`);
     if (!opt.noOpen) openBrowser(url);

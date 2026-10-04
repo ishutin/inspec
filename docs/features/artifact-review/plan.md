@@ -176,7 +176,7 @@ Log:
 ## D8 — Fixes from the live run
 status: todo
 builds on: D7
-- [ ] S34
+- [x] S34
 - [ ] S35
 - [ ] S36
 - [ ] S37
@@ -188,3 +188,8 @@ published one), a translated `group` in the display entry and in SKILL.md's brie
 overlap, the styled document list, the diff spacing and matrix `tone`, and the summary-comment handling in
 SKILL.md. Also make D1's S6 opener test wait for the recording opener instead of racing it. New test files
 `tests/read/qa-fixes.test.mjs` and `tests/read/qa-fixes.spec.mjs`. ~150 source lines.
+Log:
+- started from 2edd130 (on feature/artifact-review-d8); S34 red (tests/read/qa-fixes.test.mjs missing), S35–S38 red (tests/read/qa-fixes.spec.mjs missing); S39's check is green on the base: skills/read/SKILL.md §5 already reads "is a remark on the document as a whole, made on its summary" (D7), so the check cannot tell the row apart: a spec defect
+- S34: `open` writes `published.json` ({round}) once every display entry passes (`publish` in state.mjs); prepare starting round N+1 keeps round N's blocks.json as `base-blocks.json` beside `base.json`; `served(dir)` gives round N as submitted while the prepared round is newer than the published one and round N was submitted, and the doc route and the document list read it; a state with no published.json is served as prepared; test seen red on the round after prepare (2, expected 1)
+- tests moved with S34 (a next round shows only after `open`, as the session flow runs it): ui.spec S18 and S16 and the rows `round()` helper, summary.spec `nextRound`, server.test S28 run `open` after the round's prepare
+- S6 flake (D1): the opener test waited only for opened.log to exist and could read it before the recording opener's line was written; it now waits up to 10 s for the full line. `npm test` runs node test files with `--test-concurrency=1`: in parallel another file's server could take S7's stored port while it was stopped (seen once qa-fixes.test.mjs was added)

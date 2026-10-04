@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { readJSON, writeJSON, ensureRoot, docDir, load, displayPath, summaryPath, applyReview, submit, KINDS } from './state.mjs';
+import { readJSON, writeJSON, ensureRoot, docDir, load, served, displayPath, summaryPath, applyReview, submit, KINDS } from './state.mjs';
 
 export const BASE_PORT = 47100;
 // The server exits after this long with no request (S28); INSPEC_READ_IDLE_MS overrides it for tests.
@@ -34,7 +34,7 @@ function readBody(req) {
 }
 
 function docPayload(dir) {
-  const s = load(dir);
+  const s = served(dir);
   return {
     doc: s.doc,
     kind: s.kind,
@@ -75,7 +75,7 @@ function documents(root) {
   for (const slug of dirs(root)) {
     if (!SLUG.test(slug)) continue;
     for (const kind of KINDS) {
-      const s = dirs(path.join(root, slug)).includes(kind) ? load(docDir(root, slug, kind)) : null;
+      const s = dirs(path.join(root, slug)).includes(kind) ? served(docDir(root, slug, kind)) : null;
       if (!s) continue;
       const sent = s.result && s.result.round === s.round ? s.result.result : null;
       out.push({ slug, kind, round: s.round, status: sent === 'approved' ? 'approved' : sent ? 'changes requested' : 'in review' });

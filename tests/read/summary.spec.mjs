@@ -50,6 +50,9 @@ function nextRound(d, edit, replies) {
   fs.writeFileSync(file, edit(fs.readFileSync(file, 'utf8')));
   if (replies) fs.writeFileSync(path.join(stateDir(d.repo, d.kind), 'replies.json'), JSON.stringify(replies));
   for (const e of prepare(d.repo, d.kind)) write(e);
+  // The tab shows the new round once `open` publishes it (S34).
+  const r = iar(['open', '--id', `demo/${d.kind}`, '--no-open'], { cwd: d.repo });
+  expect(r.code, r.err).toBe(0);
 }
 
 const put = (d, body) => fetch(`${d.api}/review`, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });

@@ -68,9 +68,11 @@ test('S6 open runs the platform opener, and only prints the url without one', as
     fs.writeFileSync(path.join(bin, name), `#!/bin/sh\necho "${name} $*" >> "${log}"\n`, { mode: 0o755 });
   }
   const a = open(repo, 'plan', [], { ...process.env, PATH: `${bin}${path.delimiter}${process.env.PATH}` });
-  for (let i = 0; i < 40 && !fs.existsSync(log); i++) await sleep(50);
+  // The opener runs detached: wait until it has written its whole line, not only created the file.
+  const logged = () => (fs.existsSync(log) ? fs.readFileSync(log, 'utf8') : '');
+  for (let i = 0; i < 200 && !logged().endsWith('\n'); i++) await sleep(50);
   const opener = process.platform === 'darwin' ? 'open' : 'xdg-open';
-  assert.equal(fs.readFileSync(log, 'utf8'), `${opener} ${a.url}\n`);
+  assert.equal(logged(), `${opener} ${a.url}\n`);
 
   const bare = fs.mkdtempSync(path.join(os.tmpdir(), 'iar-path-'));
   t.after(() => fs.rmSync(bare, { recursive: true, force: true }));
@@ -327,6 +329,8 @@ test('S28 one server serves several documents, and /<token>/ lists them', async 
   await review(oapi, { D1: { status: 'ok' }, D2: { status: 'cm', comments: [{ quote: '', kind: 'question', text: '?' }] } });
   assert.equal((await submit(oapi)).status, 200);
   assert.equal(iar(['prepare', docPath(repo, 'plan'), '--id', 'other/plan', '--lang', 'en'], { cwd: repo }).code, 0);
+  // The list shows a round once `open` publishes it (S34).
+  assert.equal(iar(['open', '--id', 'other/plan', '--no-open'], { cwd: repo }).code, 0);
 
   const base = `http://127.0.0.1:${plan.port}/${plan.token}/`;
   for (const u of [base, base.slice(0, -1)]) {

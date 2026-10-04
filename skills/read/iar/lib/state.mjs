@@ -102,6 +102,9 @@ export function prepare(mdPath, { slug, kind, lang, cwd }) {
     round = result.round + 1;
     sent = old && old.round === result.round ? old : null;
     if (sent) writeJSON(path.join(dir, 'base.json'), sent);
+    // base-blocks.json: the submitted round's blocks, served until `open` publishes the new round (S34).
+    const was = readJSON(path.join(dir, 'blocks.json'));
+    if (was && was.round === result.round) writeJSON(path.join(dir, 'base-blocks.json'), was);
   } else {
     sent = readJSON(path.join(dir, 'base.json'));
     if (!sent || sent.round !== round - 1) sent = null;
@@ -148,6 +151,25 @@ export function load(dir) {
   const review = readJSON(path.join(dir, 'review.json')) || { round: blocks.round, blocks: {} };
   review.summary ||= { hash: blocks.summary?.hash || null, comments: [] };
   return { ...blocks, review, result: readJSON(path.join(dir, 'result.json')) };
+}
+
+// The round the page is served: `open` publishes the prepared round once its display entries pass (S34). Until
+// then a round prepared after a submit is not shown: the page keeps round N as submitted ("sent, waiting").
+export function publish(dir) {
+  const s = load(dir);
+  writeJSON(path.join(dir, 'published.json'), { round: s.round });
+}
+
+export function served(dir) {
+  const s = load(dir);
+  if (!s) return s;
+  const pub = readJSON(path.join(dir, 'published.json'))?.round;
+  if (!(pub < s.round) || !(s.result && s.result.round === pub)) return s;
+  const blocks = readJSON(path.join(dir, 'base-blocks.json'));
+  const review = readJSON(path.join(dir, 'base.json'));
+  if (!blocks || blocks.round !== pub || !review || review.round !== pub) return s;
+  review.summary ||= { hash: blocks.summary?.hash || null, comments: [] };
+  return { ...blocks, review, result: s.result };
 }
 
 // Display schema (spec: Architecture › State). Returns the first problem of an entry, or null.
