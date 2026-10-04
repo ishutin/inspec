@@ -60,7 +60,7 @@ Log:
 ## D3 — Review page: read, approve, submit
 status: todo
 builds on: D1
-- [ ] S10
+- [x] S10
 - [x] S15
 - [ ] S17
 - [ ] S18
@@ -75,6 +75,7 @@ Log:
 - started from accb66c (branch from feature/artifact-review-d2 at the operator's word, for one linear chain); S10, S15, S17, S18, S21, S22 red: tests/read/ui.spec.mjs and @playwright/test missing
 - dev setup: `@playwright/test` devDependency (package-lock.json), `playwright.config.mjs` (tests/read/*.spec.mjs, Chromium 1280×800, one worker: S10 stops a server and opens it on its stored port), `npm test` = node --test then `playwright test`; the server serves `ui/index.html` at `<slug>/<kind>` (it reads slug and kind from its url) and `ui/{app.js,md.js,app.css}` at `/<token>/ui/`, with a CSP (script-src self, no inline script), `referrer-policy: no-referrer` (no token in a Referer from a display link) and nosniff; the placeholder is gone
 - S15: `app.js` topic list (section headers from display.section, group labels from blocks.json, title, status dot, ⚑), focus card (section · n of N, badge, title, tldr, flag, body, meta line with check and covers ids whose title attribute holds the outcome text, comments, actions; empty fields left out), click, ↑/↓ and j/k (by key code, so any layout), Enter approves and jumps to the next not approved or un-approves to Not reviewed, also with focus on a button (default prevented), C opens a block comment box (kinds, Save/Cancel, Esc; Enter inside it is a newline); `app.css` is the mockup's tokens and components without the rejected layouts; test seen red on the placeholder page (0 topics), then green on all 42 fixture blocks
+- S10: the page keeps no review of its own: every change is PUT to the server at once and the page reads it back, so a reload, `stop` + `open` (same url) and a prepare rerun show the approvals (approvals only, as the notes say; D4 extends it to comments); test seen red on the placeholder
 
 ## D4 — Comments, theme, narrow layout and diagrams
 status: todo
