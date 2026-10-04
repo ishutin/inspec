@@ -10,11 +10,25 @@ function textNodes(root) {
   return out;
 }
 
-// [{node, at, text}] for every run of non-space characters.
+// A word is a number written in groups of three (10 000, 10\u00a0000), a run of letters and digits, or one other
+// visible character, so punctuation next to a changed word stays unmarked.
+const WORD = /\p{N}{1,3}(?:[ \u00a0\u202f]\p{N}{3})+(?![\p{L}\p{N}_])|[\p{L}\p{N}_]+|[^\s\p{L}\p{N}_]/gu;
+
+// [{node, at, end, text}] for every word of the field.
 function words(root) {
   const out = [];
-  for (const node of textNodes(root)) for (const m of node.data.matchAll(/\S+/g)) out.push({ node, at: m.index, text: m[0] });
+  for (const node of textNodes(root)) for (const m of node.data.matchAll(WORD)) out.push({ node, at: m.index, end: m.index + m[0].length, text: m[0] });
   return out;
+}
+
+// The old text of a run of deleted words, with its own spacing where the words share a text node.
+function oldText(run) {
+  let t = '';
+  run.forEach((w, k) => {
+    const p = run[k - 1];
+    t += !p ? w.text : p.node === w.node ? w.node.data.slice(p.end, w.end) : ` ${w.text}`;
+  });
+  return t;
 }
 
 // Edit script turning a into b: [{op: '=' | '-' | '+', i?, j?}] in order.
@@ -41,27 +55,34 @@ export function lcs(a, b) {
 export function diffInto(el, oldHtml) {
   const tmp = document.createElement('div');
   tmp.innerHTML = oldHtml;
-  const a = words(tmp).map((w) => w.text);
+  const aw = words(tmp);
   const bw = words(el);
-  if (a.length * bw.length > MAX_CELLS) return;
-  const ops = lcs(a, bw.map((w) => w.text));
-  // Each edit: wrap a new word, or put deleted words before a new word (or after the last one).
+  if (aw.length * bw.length > MAX_CELLS) return;
+  const ops = lcs(aw.map((w) => w.text), bw.map((w) => w.text));
+  // Each edit: wrap a run of new words of one text node in <ins>, or put deleted words before a new word (or
+  // after the last one).
   const edits = [];
   let gone = [];
+  let ins = null;
   for (const o of ops) {
     if (o.op === '-') {
-      gone.push(a[o.i]);
+      gone.push(aw[o.i]);
       continue;
     }
     const w = bw[o.j];
-    if (gone.length) edits.push({ node: w.node, at: w.at, del: gone.join(' ') });
+    if (gone.length) {
+      edits.push({ node: w.node, at: w.at, del: oldText(gone) });
+      ins = null;
+    }
     gone = [];
-    if (o.op === '+') edits.push({ node: w.node, at: w.at, end: w.at + w.text.length });
+    if (o.op === '=') ins = null;
+    else if (ins && ins.node === w.node) ins.end = w.end;
+    else edits.push((ins = { node: w.node, at: w.at, end: w.end }));
   }
   if (gone.length) {
     const last = bw[bw.length - 1];
-    if (last) edits.push({ node: last.node, at: last.at + last.text.length, del: gone.join(' '), after: true });
-    else el.append(mark('del', gone.join(' ')));
+    if (last) edits.push({ node: last.node, at: last.end, del: oldText(gone) });
+    else el.append(mark('del', oldText(gone)));
   }
   const byNode = new Map();
   for (const e of edits) (byNode.get(e.node) || byNode.set(e.node, []).get(e.node)).push(e);

@@ -107,12 +107,12 @@ Log:
 - done
 
 ## D5 — The next round
-status: todo
+status: done
 builds on: D4
 - [x] S12
 - [x] S13
 - [x] S14
-- [ ] S24
+- [x] S24
 Notes: carry between rounds in `state.mjs` (prevHash, wasApproved, approvedRound), `replies.json` read and
 deleted by prepare, `prevDisplay` in the doc route, `ui/diff.js` (word LCS) for summary, body and check,
 read-only earlier comments with Agent replies. S24 is judged here because round 2 is the last screen the
@@ -122,6 +122,10 @@ Log:
 - S12: `carry()` in state.mjs: the round-N+1 start of each block from its entry as submitted (ok + same hash → ok with `approvedRound` kept or N; ok + changed → chg, `wasApproved`; comments + changed → chg; comments + same → new; new block fresh; removed gone), earlier comments and replies kept on every carried block; the submitted review is saved as `base.json` (not in State's file list) so a prepare rerun or an edit inside round N+1 carries from the same submit; the server sets `approvedRound` when a block turns ok and clears it otherwise; S18's test moved with the row (round 2 now starts with D1 "Approved in round 1", so "1 to review"); test seen red on "Not reviewed" for an approved block
 - S13: `ui/diff.js` (served as an asset): both versions rendered by md.js, then an LCS over the words of their text nodes marks the new field's words in `<ins>` and puts deleted runs in `<del>` where they stood, so markup stays the new version's; applied to tldr, body and check when the doc route's `prevDisplay` (display of `prevHash`, the hash at the last submit, when it differs) is set; title and diagram untouched; the quote highlight skips `<del>` text; test covers a block changed twice since approval (diffs against round 2's display, not round 1's), insert, delete+insert, list and code inside the fields, an unchanged block with no marks, and a quote on a diffed field; seen red on the missing `<ins>`
 - S14: prepare reads `replies.json`, sets `reply` on the comments it names (in start.json and review.json), and deletes it; the page already shows replies under "Agent" (D4); test seen red on the file still there
+- S24 (qa): a scratch script (not committed) prepared the mockup's own csv-export spec (overview, S1–S5, architecture, touches, not in scope) with its Russian texts as display entries, opened it on the real server and captured, in light and dark at 1280×800 and 520×800: round 1 focused on S3 (flag, check, covers) and round 2 after a submit with a change on S3 and a question on S4, a `replies.json` answer and the mockup's own edits, focused on S4 (Changed, diff) and on S1 (Approved in round 1); the same states of `mockup.html` (its demo round 2) at the same sizes. Verdict: matches in layout, spacing and colour in all eight pairs (top bar, topic list and narrow pill row, card, badges, flag, meta line, diff colours, dots, buttons, dark tokens). Differences, all intended: the nav hint reads "C comment" (D3), round 2 keeps S4's question read-only with the "Agent" reply under it (S12, S14; the mockup's demo drops comments of changed blocks), the narrow row scrolls the focused pill to the nearest edge rather than the centre. Fixed on the way: the word diff split "10 000" into two words and marked "1050 000"; `diff.js` now takes a number in groups of three as one word, a punctuation mark as its own word, and one `<ins>` per run of inserted words, so it reads "~~10 000~~50 000" and "~~24 часа~~7 дней." like the mockup (S13's test still green)
+- verify: ui.spec 14/14 (S10, S11 page, S12–S23), prepare.test 7/7 (S1–S4), server.test 12/12 (S5–S9, S11, S28, modes), `npm test` green, all bare; no lint or type commands in the repository; no server left running; whole diff read against States: a block added and removed between rounds, round N+1 also after an approved round, a block changed twice since approval (diffs against the last submit), a prepare rerun and an edit inside round N+1 (carry from `base.json`), drop in round N+1 (back to the carried start), un-approve and re-approve of a carried block ("Approved", round N+1), replies on changed and unchanged blocks
+- for D6: the session writes `replies.json` (`{"c<round>-<n>": text}`, ids from result.json's feedback) into `<git-common-dir>/inspec-read/<slug>/<kind>/` before prepare; prepare deletes it; `base.json` joins `start.json` as a state file State does not list
+- done
 
 ## D6 — The /inspec:read skill and the offer
 status: todo
