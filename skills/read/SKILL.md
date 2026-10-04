@@ -41,12 +41,14 @@ node <skill dir>/iar/iar.mjs prepare <md> --id <slug>/<kind> --lang <lang>
 
 It prints a JSON list of the blocks that have no display yet, `[{id, section, group, hash, source, display}]`,
 `display` being the path to write; `[]` when every block has one (a display is written once per block text and
-reused). Exit 2 is a usage error with the reason on stderr: fix the call, never retry blindly.
+reused). Its last entry may be the document summary, `{"id":"summary", hash, doc, display}`, with `display` a
+`display/summary.<hash>.<lang>.json` path and `doc` the document's path: it is asked for again whenever any block
+changes, since the page opens on it. Exit 2 is a usage error with the reason on stderr: fix the call, never retry blindly.
 
 When it prints any block, start one `general-purpose` subagent with no model override. You do not read or
 write display texts yourself: they stay out of this session's context. Pass it:
 
-- the printed blocks, verbatim;
+- the printed blocks, verbatim (the summary entry included);
 - `lang`;
 - the intent's path (`docs/features/<slug>/intent.md`, or the temp file shown from its branch), for `covers`;
 - the flags: one line per block holding a choice this session made without the operator, `<id>: <the choice>`.
@@ -85,6 +87,12 @@ write display texts yourself: they stay out of this session's context. Pass it:
 >   - `{"type":"states","transitions":[{"from","to","on"}]}`;
 >   - `{"type":"compare","before":{"label","text"},"after":{"label","text"}}`.
 >
+> The entry with id `summary`, when listed, is the document summary the page opens on: write its `display` path
+> (`display/summary.<hash>.<lang>.json`) as JSON in `<lang>`, `{tldr, body, diagram}`, from the whole document
+> at its `doc` path, by the rules above. `tldr`: one sentence on what the document is for. `body`: markdown, its
+> main points and decisions and where it stops, at most 200 words; only what the document says, nothing added.
+> `diagram`: as above, `null` unless a picture shows the document better.
+>
 > Write only the files named; overwrite none other. Reply with the ids you wrote, one per line, and nothing
 > else.
 
@@ -107,7 +115,9 @@ node <skill dir>/iar/iar.mjs open --id <slug>/<kind>
 - `{"result":"approved","round":N}`: the document is agreed. Say so in one line and return to the step that
   offered the review (it commits and goes on), or, when run alone, stop.
 - `{"result":"changes_requested","round":N,"approved":[…],"feedback":[{block, hash, comments:[{id, quote,
-  kind, text}]}]}` (`quote` is `""` for a comment on the whole block):
+  kind, text}]}]}` (`quote` is `""` for a comment on the whole block). A feedback entry with `"block":"summary"`
+  is a remark on the document as a whole, made on its summary: act on it like a block's, on whatever blocks it
+  concerns.
   - `change`: edit the block's source. Edit through the skill that owns the document (intent through
     `/inspec:brief`'s rules, spec.md only through `/inspec:spec`, plan.md through `/inspec:plan`); touch no
     block nobody commented on.

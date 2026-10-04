@@ -154,7 +154,7 @@ builds on: D6
 - [x] S30
 - [x] S31
 - [x] S32
-- [ ] S33
+- [x] S33
 Notes: prepare's `summary` entry and its hash, `open`'s schema check for it, the summary screen before the
 first block (topic list item without a dot, left out of progress and counts), comments on it carried like a
 block's with `"block":"summary"` in the result, the "Changed since round K" list from round 2, and the
@@ -169,3 +169,4 @@ Log:
 - S32: from round 2 the summary card lists "Changed since round K" (K = round − 1): every block whose hash differs from its `prevHash` with "Changed" or "Changed after approval", and every round-K comment of a block with an agent reply (its text and the reply), in block order, each title a link to the block; the list is taken from the carry, so it stays as the round started when blocks are approved; the summary's own answered comments show under it on the same screen, not in the list (a choice); test seen red on the missing summary screen
 - tests moved with S30: ui.spec's `page` fixture clicks Start review after each `goto` and `reload` (its rows are about the blocks), S19's second context checks the summary heading, S21 also scans the summary screen and counts 46 to review, round 2–4 tests write a summary display, `setup` leaves the summary entry out of `blocks`
 - addition outside the rows, at the operator's request (remove every emoji from the page UI): checked `skills/read/iar/ui/`: it holds no emoji (the Comment buttons read "Comment", "Comment on block", "Comment on document"); the only non-ASCII marks are ⚑, ✓, the arrow and ↵ key glyphs and typographic quotes, all kept; no test asserted an emoji, nothing to change
+- S33: skills/read/SKILL.md: prepare's printed list may end with the summary entry (`display/summary.<hash>.<lang>.json`, `doc`), passed to the subagent with the blocks; the brief asks for `{tldr, body, diagram}` from the whole document by the display rules (at most 200 words, nothing added); a `"block":"summary"` feedback entry is a remark on the whole document; check green (was exit 1)
