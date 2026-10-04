@@ -4,8 +4,8 @@ status: todo
 ---
 
 ## D1 — Prepare, open and wait
-status: blocked
-- [ ] S1
+status: in progress
+- [x] S1
 - [x] S2
 - [x] S3
 - [x] S4
@@ -33,7 +33,9 @@ Log:
 - S9: submit 409 on new/chg blocks or a round already sent; review PUT validated in full before writing (400 on unknown id, status or comment kind; 409 on another round)
 - verify: prepare.test 6/7 (only S1's intent case red), server.test 6/6, `npm test` 12/13; no server left running; whole diff read against States (S4 inputs, openers, token, squatted port, late wait)
 - blocked on S1
-Blocked: S1 is a spec defect. Its intent list stops at O12, but the intent.md the fixture must copy "as committed" has O13 (added in 7a0ad18, before "spec agreed" ecb5e82); the split rules give `O13` between `O12` and `headline-scenario`, so the row cannot hold without changing what it says. Tried: parse.mjs matches the Split rules (plan and spec lists hold, spec.ids 42 ids); a stale intent copy would satisfy the list but not "as committed". To unblock: through /inspec:spec, add O13 to S1's intent list (and fix "outcomes O1–O12" in the spec's opening and "41 blocks" in States to 42), then copy the new spec.md into tests/read/fixtures/ (its ids stay the same), update the list in tests/read/prepare.test.mjs and check S1. Everything else in D1 holds.
+- resumed from 75e08f2 on the operator's word: spec fixed, D1 back in progress
+- S1: fixtures/spec.md copied from spec.md as committed (75e08f2), spec.ids unchanged (same 42 ids); intent list in prepare.test.mjs now O1–O13; prepare.test 7/7
+Unblocked (was Blocked): S1 is a spec defect. Its intent list stops at O12, but the intent.md the fixture must copy "as committed" has O13 (added in 7a0ad18, before "spec agreed" ecb5e82); the split rules give `O13` between `O12` and `headline-scenario`, so the row cannot hold without changing what it says. Tried: parse.mjs matches the Split rules (plan and spec lists hold, spec.ids 42 ids); a stale intent copy would satisfy the list but not "as committed". To unblock: through /inspec:spec, add O13 to S1's intent list (and fix "outcomes O1–O12" in the spec's opening and "41 blocks" in States to 42), then copy the new spec.md into tests/read/fixtures/ (its ids stay the same), update the list in tests/read/prepare.test.mjs and check S1. Everything else in D1 holds. — answered: spec fixed through /inspec:spec in 75e08f2 (S1 lists O13, O1–O13, 42 blocks).
 
 ## D2 — Guards, drop and many documents
 status: todo
