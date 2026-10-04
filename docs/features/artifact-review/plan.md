@@ -85,7 +85,7 @@ Log:
 - done
 
 ## D4 — Comments, theme, narrow layout and diagrams
-status: todo
+status: done
 builds on: D3
 - [x] S16
 - [x] S19
@@ -101,6 +101,10 @@ Log:
 - S23: `diagram()` draws flow (steps, `you` dashed, loop), matrix (label column plus one per column, tags with tones), states (from → to, on) and compare (before/after) as in the mockup, inside `figure.dia[data-content]` between body and meta; every diagram text goes through a new md.js `code()` (backtick spans as code, everything else escaped) instead of `inline()`, because the row and State say all other markup stays text (inline would make **bold** and links elements); the matrix column count reaches CSS as `--cols` set from script, since the CSP forbids inline style attributes; at ≤ 760 px the mockup's CSS stacks the flow and shows the matrix in one column; test seen red on the missing figure, checks every text, code spans, no live tags, and the wide and 760/375 px geometry with no horizontal scroll
 - S19: the theme switch came with D3 (System/Light/Dark, `iar.theme` in try/catch storage); the new test was green on it at once, so it was seen red against two mutations instead (storage read without try/catch: the page does not render; the choice not stored: Light lost on reload); it checks System following `prefers-color-scheme`, Light and Dark overriding it and surviving a reload, body background and text colour differing, and a context whose `localStorage` throws rendering in System with no page error
 - S20: test seen red on the row's height (122 px: the topic list's group labels from D3 wrapped inside the row); at ≤ 760 px app.css now hides the group labels like the section names, makes the grid column `minmax(0,1fr)` so long content cannot widen the page, and lets card text break anywhere; the test, at 760 and 375 px on the 42-block spec with long unbreakable paths in tldr, body and a table, checks one row ≤ 56 px that scrolls, the focused topic in the viewport after moving by keyboard, by click at the row's end and back, and no horizontal page scroll
+- verify fixes: a touch or keyboard selection offers "Comment" once `selectionchange` rests (350 ms; the mouse still on release), so the narrow layout can comment too; S21's test now has a Russian matrix diagram (States: Cyrillic inside diagrams)
+- verify: ui.spec 11/11 (S10, S11 page, S15–S23), prepare.test 7/7 (S1–S4), server.test 12/12 (S5–S9, S11, S28, modes), `npm test` green, all bare; no lint or type commands in the repository; no server left running; screenshots of the four diagrams, the dialog and the narrow row in light and dark at 1280 and 520 px look like the mockup's diagram and narrow styles (S24 is judged in D5); whole diff read against States: comment by selection and on the block in the three kinds, approve with comments (Yes, No, Enter, Escape), un-approve, earlier rounds' comments and replies kept, Cyrillic, raw HTML and `javascript:` inside diagrams, light/dark/system and throwing storage, ≤ 760 px
+- for D5: earlier rounds' comments render read-only (`.cmt.old`, no remove, "Agent" reply) and their quotes are highlighted dashed; approve keeps them; `diagram()` draws `display.diagram` only (S13's "diagram shows the new version only" needs nothing more); the dialog lives in `confirmBox()`
+- done
 
 ## D5 — The next round
 status: todo
