@@ -1,17 +1,18 @@
 #!/usr/bin/env node
-// inspec-read CLI: prepare | open | wait | stop. Node >= 18, built-ins only.
+// inspec-read CLI: prepare | open | wait | drop | stop. Node >= 18, built-ins only.
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { UsageError, parseId, checkLang, rootDir, docDir, prepare, load, badDisplays, readJSON } from './lib/state.mjs';
+import { UsageError, parseId, checkLang, rootDir, docDir, prepare, load, badDisplays, drop, readJSON } from './lib/state.mjs';
 
 const SERVER = path.join(path.dirname(fileURLToPath(import.meta.url)), 'lib', 'server.mjs');
 const USAGE = `usage:
   iar.mjs prepare <md> --id <slug>/<kind> --lang <tag>
   iar.mjs open --id <slug>/<kind> [--no-open]
   iar.mjs wait --id <slug>/<kind>
+  iar.mjs drop --id <slug>/<kind>
   iar.mjs stop`;
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -125,6 +126,12 @@ const commands = {
       }
       await sleep(250);
     }
+  },
+
+  drop({ opt }) {
+    const { slug, kind, dir } = state(opt);
+    const done = drop(dir);
+    process.stdout.write(done ? `inspec-read: dropped the unsent review of ${slug}/${kind}\n` : `inspec-read: ${slug}/${kind} has nothing unsent\n`);
   },
 
   async stop() {

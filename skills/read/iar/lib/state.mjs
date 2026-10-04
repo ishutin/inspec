@@ -75,12 +75,16 @@ export function prepare(mdPath, { slug, kind, lang, cwd }) {
   let round = readJSON(path.join(dir, 'blocks.json'))?.round || 1;
   if (result && result.round >= round) round = result.round + 1;
 
+  // start.json: the round as prepare starts it, before the page's edits; drop returns to it.
+  const start = { round, blocks: {} };
+  for (const b of blocks) start.blocks[b.id] = freshEntry(b.hash);
   const review = { round, blocks: {} };
   for (const b of blocks) {
     const prev = old && old.round === round ? old.blocks[b.id] : null;
-    review.blocks[b.id] = prev && prev.hash === b.hash ? prev : freshEntry(b.hash);
+    review.blocks[b.id] = prev && prev.hash === b.hash ? prev : start.blocks[b.id];
   }
   writeJSON(path.join(dir, 'blocks.json'), { doc: slug, kind, lang, round, blocks });
+  writeJSON(path.join(dir, 'start.json'), start);
   writeJSON(path.join(dir, 'review.json'), review);
 
   return blocks
@@ -192,6 +196,23 @@ export function applyReview(dir, body) {
   }
   writeJSON(path.join(dir, 'review.json'), next);
   return next;
+}
+
+// Discards the current round's unsent statuses and comments (S11). Returns false when the round was already sent.
+export function drop(dir) {
+  const s = load(dir);
+  if (s.result && s.result.round === s.round) return false;
+  const start = readJSON(path.join(dir, 'start.json'));
+  const review = { round: s.round, blocks: {} };
+  for (const b of s.blocks) {
+    const cur = s.review.blocks[b.id];
+    review.blocks[b.id] =
+      start && start.round === s.round && start.blocks[b.id]?.hash === b.hash
+        ? start.blocks[b.id]
+        : { ...freshEntry(b.hash), comments: (cur?.comments || []).filter((c) => c.round !== s.round) };
+  }
+  writeJSON(path.join(dir, 'review.json'), review);
+  return true;
 }
 
 // Returns {code, result}: 409 while blocks are pending or the round was already sent.

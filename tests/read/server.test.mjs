@@ -259,3 +259,41 @@ test('S5 open refuses missing and schema-breaking display entries, naming every 
   assert.equal(r.code, 0, r.err);
   assert.match(r.out, /^inspec-read: http:\/\/127\.0\.0\.1:\d+\/[0-9a-f]{32}\/demo\/spec$/m);
 });
+
+test('S11 drop discards the round\'s unsent statuses and comments, leaving it as prepare did', async (t) => {
+  const repo = mkRepo();
+  t.after(() => {
+    iar(['stop'], { cwd: repo });
+    fs.rmSync(repo, { recursive: true, force: true });
+  });
+  const dir = stateDir(repo, 'plan');
+  writeDisplays(prepare(repo, 'plan'));
+  const fresh = readJSON(path.join(dir, 'review.json'));
+  const a = open(repo);
+  const doc = async () => (await (await fetch(`${a.api}/doc`)).json()).review;
+  assert.deepEqual(await doc(), fresh);
+
+  await review(a.api, { D1: { status: 'ok' }, D2: { status: 'cm', comments: [{ quote: 'x', kind: 'change', text: 'y' }] } });
+  assert.notDeepEqual(await doc(), fresh);
+  const r = iar(['drop', '--id', 'demo/plan'], { cwd: repo });
+  assert.equal(r.code, 0, r.err);
+  assert.deepEqual(await doc(), fresh, 'the page gets the round as prepare left it');
+  assert.equal(fs.existsSync(path.join(dir, 'result.json')), false);
+
+  // A prepare rerun in the same round keeps the edits (S10); drop still goes back to the round's start.
+  await review(a.api, { D1: { status: 'ok' } });
+  assert.deepEqual(prepare(repo, 'plan'), []);
+  assert.equal((await doc()).blocks.D1.status, 'ok');
+  assert.equal(iar(['drop', '--id', 'demo/plan'], { cwd: repo }).code, 0);
+  assert.deepEqual(await doc(), fresh);
+
+  // A sent round has nothing unsent: drop changes nothing.
+  await review(a.api, { D1: { status: 'ok' }, D2: { status: 'ok' } });
+  assert.equal((await submit(a.api)).status, 200);
+  const sent = fs.readFileSync(path.join(dir, 'review.json'), 'utf8');
+  assert.equal(iar(['drop', '--id', 'demo/plan'], { cwd: repo }).code, 0);
+  assert.equal(fs.readFileSync(path.join(dir, 'review.json'), 'utf8'), sent);
+  assert.deepEqual(readJSON(path.join(dir, 'result.json')), { result: 'approved', round: 1 });
+
+  assert.equal(iar(['drop', '--id', 'demo/intent'], { cwd: repo }).code, 2, 'nothing prepared');
+});

@@ -43,7 +43,7 @@ Unblocked (was Blocked): S1 is a spec defect. Its intent list stops at O12, but 
 status: todo
 builds on: D1
 - [x] S5
-- [ ] S11
+- [x] S11
 - [ ] S28
 Notes: display schema validation in `open` (fields, the four diagram types, matrix cell counts), `drop` in
 `iar.mjs` and `state.mjs`, the `/<token>/` document list, and the 8-hour idle exit (make the timeout injectable
@@ -51,6 +51,7 @@ so the test does not wait). Two documents in one repository share one server.jso
 Log:
 - started from b12ca84; S5, S11 and S28 have no test in tests/read/server.test.mjs yet (the file's 6 tests are green); each new test is seen red on its row's assertion before the code
 - S5: state.mjs `badDisplays` checks every entry (all eight fields, text/null types, covers as {id, text}, diagram type one of flow/matrix/states/compare with each type's shape, one matrix cell per column, unparsable JSON); open lists every bad id with its reason on stderr and exits 2 before starting a server or an opener; test seen red on the exit code with schema-breaking entries
+- S11: `drop` in iar.mjs and state.mjs; prepare also writes `start.json` (the round as prepare starts it, before the page's edits; not in State's file list, added because a prepare rerun keeps in-round edits, S10, so review.json cannot serve as the start) and drop writes it back as review.json; a sent round is left as is; test seen red on drop's exit code (no such command)
 
 ## D3 — Review page: read, approve, submit
 status: todo
