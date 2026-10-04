@@ -1,6 +1,6 @@
 ---
 name: Artifact review (IAR)
-status: todo
+status: done
 ---
 
 # Artifact review (IAR): spec
