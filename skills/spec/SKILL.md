@@ -106,11 +106,15 @@ answer gives the same observable behaviour; fix a technical gap yourself, take a
 The review runs once; never a second reader. Past about 15 findings the spec is too big: cut scope or split the
 feature with the operator, not another round.
 
-## 5. Prove, commit, hand off
+## 5. Prove, agree, commit, hand off
 
 Run each command on the base (a clean checkout of the branch the change starts from), bare: a new row must be
 red there by an assertion, a regression row green; a check whose test file does not exist yet is proven by the
 build. Rewrite the check or the row, never weaken it, until it holds.
+
+Then ask the operator: "Agree as is, edit in chat, or open the review with /inspec:read." Edit in chat and ask
+again; for the review, follow `/inspec:read <slug> spec` on the file as it is until it comes back approved,
+making each edit by this skill's rules. Set `status: done` once the operator agrees and nothing is Open.
 
 Commit spec.md, the mockup and the captures (`git add -f` what `.gitignore` drops) on `feature/<slug>`, never on
 the base and never with other changes. If the branch does not exist, `git switch -c feature/<slug>` from the
@@ -124,5 +128,5 @@ git commit -m "docs(<slug>): spec" -m "Review: 12 — guess 5, state 3, premise 
 The `Review:` trailer counts the findings by class and by how each ended. Every few features, turn a class
 that keeps coming back into a rule of §2 or a `references/` file.
 
-Set `status: done` once the operator agrees and nothing is Open. Switch back to the operator's branch, report
-the rows and any open question in a few lines, and go on to `/inspec:plan <slug>` in this session.
+Switch back to the operator's branch, report the rows and any open question in a few lines, and go on to
+`/inspec:plan <slug>` in this session.

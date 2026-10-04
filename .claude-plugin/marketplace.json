@@ -7,7 +7,7 @@
     {
       "name": "inspec",
       "source": "./",
-      "description": "start, brief, spec, plan, build, review"
+      "description": "start, brief, spec, plan, build, review, and read: a browser review of intent, spec and plan"
     }
   ],
   "metadata": {

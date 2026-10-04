@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>inspec · ревью spec.md</title>
+<style>
+:root{
+  --bg:#f7f7f5;--panel:#fff;--ink:#1d1d1b;--muted:#6b6b66;--line:#e4e3de;--soft:#efeeea;
+  --accent:#3b5bdb;--accent-ink:#fff;--ok:#2b8a3e;--ok-bg:#e6f4ea;--warn:#b35c00;--warn-bg:#fff3e0;
+  --cm:#f2c94c55;--cm-strong:#e0a800;--del:#fde2e1;--ins:#dcf5e3;--code:#f1f0ec;
+  --r:10px;--shadow:0 1px 2px #0000000d,0 4px 16px #0000000a;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#141413;--panel:#1d1d1b;--ink:#ecebe6;--muted:#9a9992;--line:#2f2e2b;--soft:#262523;
+  --accent:#7c94ff;--accent-ink:#0d0d0c;--ok:#5cc777;--ok-bg:#1c3324;--warn:#ffb05c;--warn-bg:#3a2a14;
+  --cm:#e0a80040;--cm-strong:#f2c94c;--del:#4a1f1f;--ins:#1b3d27;--code:#262523;--shadow:none;}}
+:root[data-theme="dark"]{
+  --bg:#141413;--panel:#1d1d1b;--ink:#ecebe6;--muted:#9a9992;--line:#2f2e2b;--soft:#262523;
+  --accent:#7c94ff;--accent-ink:#0d0d0c;--ok:#5cc777;--ok-bg:#1c3324;--warn:#ffb05c;--warn-bg:#3a2a14;
+  --cm:#e0a80040;--cm-strong:#f2c94c;--del:#4a1f1f;--ins:#1b3d27;--code:#262523;--shadow:none;}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-size:15px;line-height:1.55}
+button{font:inherit;color:inherit;cursor:pointer}
+code{background:var(--code);padding:1px 5px;border-radius:4px;font-size:.88em;font-family:ui-monospace,Menlo,monospace}
+mark.cm{background:var(--cm);color:inherit;border-bottom:2px solid var(--cm-strong);border-radius:2px;cursor:pointer}
+del{background:var(--del);text-decoration:line-through;opacity:.85}
+ins{background:var(--ins);text-decoration:none}
+
+/* top bar */
+.top{position:sticky;top:0;z-index:20;background:var(--panel);border-bottom:1px solid var(--line);display:flex;gap:12px;align-items:center;padding:10px 16px;flex-wrap:wrap}
+.brand{font-weight:650;letter-spacing:-.01em}
+.brand small{font-weight:400;color:var(--muted);margin-left:6px}
+.seg{display:inline-flex;background:var(--soft);border-radius:8px;padding:2px}
+.seg button{border:0;background:transparent;padding:4px 10px;border-radius:6px;font-size:13px;color:var(--muted)}
+.seg button.on{background:var(--panel);color:var(--ink);box-shadow:var(--shadow)}
+.spacer{flex:1}
+.progress{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
+.bar{width:140px;height:6px;background:var(--soft);border-radius:3px;overflow:hidden;display:flex}
+.bar i{display:block;height:100%}
+.btn{border:1px solid var(--line);background:var(--panel);padding:6px 12px;border-radius:8px;font-size:14px}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:550}
+.btn.ok{background:var(--ok-bg);border-color:transparent;color:var(--ok);font-weight:550}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.lbl{font-size:12px;color:var(--muted);margin-right:2px}
+
+/* common block bits */
+.tag{display:inline-block;font-size:11px;font-weight:600;letter-spacing:.03em;text-transform:uppercase;color:var(--muted)}
+.st{font-size:12px;padding:2px 8px;border-radius:99px;white-space:nowrap}
+.st.ok{background:var(--ok-bg);color:var(--ok)}
+.st.cm{background:var(--warn-bg);color:var(--warn)}
+.st.new{background:var(--soft);color:var(--muted)}
+.st.chg{background:var(--accent);color:var(--accent-ink)}
+.flag{background:var(--warn-bg);color:var(--warn);border-radius:8px;padding:8px 10px;font-size:13.5px;margin:10px 0}
+.flag b{font-weight:600}
+.tldr{font-size:16px;font-weight:550;margin:4px 0 8px}
+.body p{margin:.5em 0}.body ul{margin:.4em 0;padding-left:1.2em}
+.check{font-size:13px;color:var(--muted);border-left:3px solid var(--line);padding-left:10px;margin-top:10px}
+.src{white-space:pre-wrap;font-family:ui-monospace,Menlo,monospace;font-size:12.5px;background:var(--code);padding:10px;border-radius:8px;margin-top:10px}
+.cmts{margin-top:12px;display:flex;flex-direction:column;gap:6px}
+.cmt{background:var(--soft);border-radius:8px;padding:8px 10px;font-size:13.5px}
+.cmt q{display:block;color:var(--muted);font-size:12.5px;quotes:"«" "»";margin-bottom:2px}
+.cmt .k{font-size:11px;font-weight:600;text-transform:uppercase;color:var(--warn);margin-right:6px}
+.cmt .x{float:right;border:0;background:none;color:var(--muted);font-size:12px}
+.actions{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+.linkish{border:0;background:none;color:var(--muted);font-size:13px;padding:0;text-decoration:underline dotted}
+.carry{font-size:12.5px;color:var(--ok)}
+
+/* layout A: focus */
+.A{max-width:760px;margin:24px auto;padding:0 16px}
+.A .dots{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:14px}
+.A .dots button{width:28px;height:8px;border:0;border-radius:4px;background:var(--soft);padding:0}
+.A .dots button.ok{background:var(--ok)}.A .dots button.cm{background:var(--cm-strong)}.A .dots button.cur{outline:2px solid var(--accent);outline-offset:2px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:22px 24px;box-shadow:var(--shadow)}
+.card .hd{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.card h2{margin:6px 0 2px;font-size:22px;letter-spacing:-.01em}
+.A .nav{display:flex;justify-content:space-between;margin-top:14px;color:var(--muted);font-size:13px}
+.kbd{font-family:ui-monospace,Menlo,monospace;font-size:11px;border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:0 4px}
+
+/* layout B: document */
+.B{display:grid;grid-template-columns:220px minmax(0,1fr) 300px;gap:0;min-height:calc(100vh - 54px)}
+.B .toc{border-right:1px solid var(--line);padding:16px 10px;position:sticky;top:54px;height:calc(100vh - 54px);overflow:auto}
+.B .toc a{display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:6px;color:var(--ink);text-decoration:none;font-size:13.5px}
+.B .toc a:hover{background:var(--soft)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--line);flex:none}
+.dot.ok{background:var(--ok)}.dot.cm{background:var(--cm-strong)}.dot.chg{background:var(--accent)}
+.B .doc{padding:20px 28px 80px;max-width:780px}
+.B .blk{position:relative;padding:14px 16px 14px 18px;border-radius:10px;margin-bottom:10px;border:1px solid transparent}
+.B .blk:hover{border-color:var(--line);background:var(--panel)}
+.B .blk::before{content:"";position:absolute;left:0;top:12px;bottom:12px;width:3px;border-radius:2px;background:var(--line)}
+.B .blk.ok::before{background:var(--ok)}.B .blk.cm::before{background:var(--cm-strong)}.B .blk.chg::before{background:var(--accent)}
+.B .blk h3{margin:0;font-size:17px}
+.B .blk .hd{display:flex;align-items:center;gap:8px;justify-content:space-between}
+.B .blk .actions{margin-top:8px}
+.B .blk.ok .body{opacity:.72}
+.B .rail{border-left:1px solid var(--line);padding:16px;position:sticky;top:54px;height:calc(100vh - 54px);overflow:auto}
+.B .rail h4{margin:0 0 10px;font-size:13px;color:var(--muted);font-weight:600}
+
+/* layout C: checklist */
+.C{max-width:880px;margin:20px auto;padding:0 16px}
+.C .row{background:var(--panel);border:1px solid var(--line);border-radius:10px;margin-bottom:8px}
+.C .rh{display:grid;grid-template-columns:28px 64px minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px 12px;cursor:pointer}
+.C .rh .t{font-size:14.5px}
+.C .rh .id{font-family:ui-monospace,Menlo,monospace;font-size:12px;color:var(--muted)}
+.C .rb{padding:0 16px 14px 114px;border-top:1px solid var(--line);padding-top:12px}
+.C .grp{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin:18px 4px 8px}
+.ck{width:20px;height:20px;border-radius:6px;border:1.5px solid var(--line);display:grid;place-items:center;font-size:13px;background:var(--panel)}
+.ck.ok{background:var(--ok);border-color:var(--ok);color:#fff}.ck.cm{background:var(--cm-strong);border-color:var(--cm-strong);color:#000}
+
+/* popovers */
+.pop{position:absolute;z-index:50;background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 30px #0003;padding:8px}
+.pop textarea{width:280px;height:80px;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:6px;font:inherit;font-size:14px;resize:vertical}
+.pop .kinds{display:flex;gap:4px;margin:6px 0}
+.pop .kinds button{font-size:12px;border:1px solid var(--line);background:none;border-radius:99px;padding:2px 8px}
+.pop .kinds button.on{background:var(--warn-bg);color:var(--warn);border-color:transparent}
+.modal{position:fixed;inset:0;background:#0007;display:grid;place-items:center;z-index:60;padding:16px}
+.modal>div{background:var(--panel);border-radius:14px;max-width:640px;width:100%;padding:20px;max-height:85vh;overflow:auto}
+.modal pre{background:var(--code);padding:12px;border-radius:8px;font-size:12px;overflow:auto}
+.round{font-size:12.5px;background:var(--soft);padding:3px 9px;border-radius:99px;color:var(--muted)}
+
+@media (max-width:900px){
+  .B{grid-template-columns:1fr}.B .toc,.B .rail{display:none}.B .doc{padding:16px}
+  .C .rb{padding-left:16px}.C .rh{grid-template-columns:24px minmax(0,1fr) auto}.C .rh .id{display:none}
+}
+</style>
+</head>
+<body>
+<div class="top">
+  <div class="brand">inspec review <small>csv-export · spec.md</small></div>
+  <span class="round" id="round">Раунд 1</span>
+  <span class="lbl">Вид</span>
+  <div class="seg" id="layoutSeg">
+    <button data-v="A">Фокус</button><button data-v="B">Документ</button><button data-v="C">Чеклист</button>
+  </div>
+  <div class="spacer"></div>
+  <div class="progress"><div class="bar" id="bar"></div><span id="ptext"></span></div>
+  <button class="btn primary" id="submit">Отправить</button>
+  <div class="seg" id="themeSeg" title="Тема">
+    <button data-t="system">Авто</button><button data-t="light">Светлая</button><button data-t="dark">Тёмная</button>
+  </div>
+</div>
+<main id="app"></main>
+
+<script>
+/* ---------- demo data: what the converter would produce from spec.md ---------- */
+const R1 = [
+ {id:'overview',tag:'Обзор',title:'О чём эта спека',
+  tldr:'Кнопка «Экспорт CSV» на экране «Заказы» скачивает то, что сейчас видно в таблице.',
+  body:'<p>5 правил контракта, 3 модуля кода, 1 новый эндпоинт. Большие выгрузки уходят в фоновую задачу.</p><p>Из брифа покрыты все 3 результата и основной сценарий.</p>',
+  src:'Export the Orders table to CSV from the Orders screen. 5 rows, 3 modules, 1 new endpoint.'},
+ {id:'S1',tag:'Контракт',title:'S1 · Кнопка экспорта',
+  tldr:'На экране «Заказы» в тулбаре есть кнопка «Экспорт CSV»; клик скачивает файл orders-ГГГГ-ММ-ДД.csv.',
+  body:'<p>Кнопка видна всем ролям с доступом к экрану. Имя файла — дата в часовом поясе пользователя.</p>',
+  check:'Проверка: e2e <code>orders-export.spec.ts › downloads file</code> — кликает кнопку, ждёт загрузку, сверяет имя.',
+  src:'S1 — The Orders toolbar shows an "Export CSV" button; clicking it downloads orders-YYYY-MM-DD.csv.\n  check: e2e orders-export.spec.ts › downloads file'},
+ {id:'S2',tag:'Контракт',title:'S2 · Только отфильтрованные строки',
+  tldr:'В файле ровно те строки и колонки, что видны с текущими фильтрами и сортировкой.',
+  body:'<p>Скрытые пользователем колонки в файл не попадают. Порядок строк совпадает с таблицей.</p>',
+  check:'Проверка: API-тест — 3 набора фильтров на фикстуре из 200 заказов, сравнение с выдачей таблицы.',
+  src:'S2 — The file holds exactly the rows and columns visible under the current filters and sort.'},
+ {id:'S3',tag:'Контракт',title:'S3 · Кодировка и разделитель',
+  tldr:'UTF-8 с BOM, разделитель — запятая, чтобы Excel открывал кириллицу без танцев.',
+  body:'<p>Поля с запятыми, кавычками и переводами строк экранируются по RFC 4180.</p>',
+  check:'Проверка: юнит-тест сериализатора на строках с <code>"</code>, <code>,</code>, <code>\\n</code> и кириллицей.',
+  flag:'Агент решил сам: разделитель — запятая. В русской локали Excel ждёт точку с запятой.',
+  src:'S3 — UTF-8 with BOM, comma separator; RFC 4180 quoting.'},
+ {id:'S4',tag:'Контракт',title:'S4 · Большие выгрузки',
+  tldr:'Больше 10 000 строк — экспорт идёт в фоне, по готовности приходит уведомление со ссылкой.',
+  body:'<p>Ссылка живёт 24 часа. Пока задача идёт, повторный клик не запускает вторую.</p>',
+  check:'Проверка: интеграционный тест с 10 001 строкой — ответ 202, задача в очереди, уведомление после выполнения.',
+  flag:'Агент решил сам: порог 10 000 строк и TTL ссылки 24 ч.',
+  src:'S4 — Over 10 000 rows the export runs as a background job; a notification links the file (TTL 24h).'},
+ {id:'S5',tag:'Контракт',title:'S5 · Пустой результат',
+  tldr:'Если фильтры ничего не нашли, кнопка неактивна с подсказкой «Нечего экспортировать».',
+  body:'',check:'Проверка: e2e — фильтр без совпадений, кнопка disabled, тултип.',
+  src:'S5 — With zero rows the button is disabled with tooltip "Nothing to export".'},
+ {id:'arch',tag:'Архитектура',title:'Где живёт код',
+  tldr:'Новый эндпоинт GET /orders/export переиспользует запрос таблицы; сериализатор — отдельный модуль.',
+  body:'<ul><li><code>api/orders/export.ts</code> — эндпоинт, стримит ответ</li><li><code>lib/csv.ts</code> — сериализатор (новый)</li><li><code>jobs/export-job.ts</code> — фоновая задача для S4</li></ul>',
+  src:'Architecture: GET /orders/export reuses buildOrdersQuery(); lib/csv.ts new; jobs/export-job.ts for S4.'},
+ {id:'touch',tag:'Затрагивает',title:'Что ещё меняется',
+  tldr:'Тулбар «Заказы», билдер запроса таблицы и один существующий тест на тулбар.',
+  body:'<p><code>OrdersToolbar.test.tsx</code> — снапшот поменяется (+1 кнопка).</p>',
+  src:'Touches: OrdersToolbar, buildOrdersQuery callers (2, rg "buildOrdersQuery"), OrdersToolbar.test.tsx snapshot.'},
+ {id:'oos',tag:'Не входит',title:'Вне рамок',
+  tldr:'XLSX, выбор колонок в диалоге и экспорт с других экранов — не в этой фиче.',
+  body:'',src:'Not in scope: XLSX, column picker, export from other screens.'},
+];
+// what round 2 looks like after the agent addressed comments on S3 and S4
+const R2_PATCH = {
+ S3:{tldr:'UTF-8 с BOM, разделитель <del>— запятая</del><ins>зависит от локали: «;» для ru/de/fr, «,» для остальных</ins>.',
+     flag:null, src:'S3 — UTF-8 with BOM; separator follows locale (";" for ru/de/fr, "," otherwise).'},
+ S4:{tldr:'Больше <del>10 000</del><ins>50 000</ins> строк — экспорт идёт в фоне, по готовности приходит уведомление со ссылкой.',
+     body:'<p>Ссылка живёт <del>24 часа</del><ins>7 дней</ins>. Пока задача идёт, повторный клик не запускает вторую.</p>',flag:null},
+};
+
+/* ---------- state ---------- */
+let round=1, blocks=JSON.parse(JSON.stringify(R1));
+const st={}; // id -> {status:'new'|'ok'|'cm'|'chg', comments:[{quote,text,kind}]}
+blocks.forEach(b=>st[b.id]={status:'new',comments:[]});
+let layout=localGet('iar.layout')||'B', cur=0, open=new Set(['S3']), showSrc=new Set();
+function localGet(k){try{return localStorage.getItem(k)}catch(e){return null}}
+function localSet(k,v){try{localStorage.setItem(k,v)}catch(e){}}
+
+/* ---------- theme ---------- */
+function setTheme(t){ if(t==='system') document.documentElement.removeAttribute('data-theme'); else document.documentElement.dataset.theme=t;
+  localSet('iar.theme',t); document.querySelectorAll('#themeSeg button').forEach(b=>b.classList.toggle('on',b.dataset.t===t)); }
+setTheme(localGet('iar.theme')||'system');
+themeSeg.onclick=e=>{if(e.target.dataset.t)setTheme(e.target.dataset.t)};
+layoutSeg.onclick=e=>{if(e.target.dataset.v){layout=e.target.dataset.v;localSet('iar.layout',layout);render()}};
+
+/* ---------- helpers ---------- */
+const stLabel={new:'не просмотрено',ok:'одобрено',cm:'есть замечания',chg:'изменено'};
+function badge(id){const s=st[id].status;return `<span class="st ${s}">${s==='ok'&&st[id].carried?'одобрено в раунде 1':stLabel[s]}</span>`}
+function cmtsHtml(id){return st[id].comments.length?`<div class="cmts">${st[id].comments.map((c,i)=>`<div class="cmt"><button class="x" onclick="delCmt('${id}',${i})">убрать</button>${c.quote?`<q>${esc(c.quote)}</q>`:''}<span class="k">${c.kind}</span>${esc(c.text)}</div>`).join('')}</div>`:''}
+function esc(s){return s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+function content(b){return `
+  <div class="tldr" data-sel="${b.id}">${b.tldr}</div>
+  ${b.flag?`<div class="flag"><b>⚑ Проверьте:</b> ${b.flag}</div>`:''}
+  ${b.body?`<div class="body" data-sel="${b.id}">${b.body}</div>`:''}
+  ${b.check?`<div class="check" data-sel="${b.id}">${b.check}</div>`:''}
+  ${showSrc.has(b.id)?`<div class="src">${esc(b.src)}</div>`:''}
+  ${cmtsHtml(b.id)}`}
+function acts(b){const s=st[b.id].status;return `<div class="actions">
+  <button class="btn ${s==='ok'?'ok':''}" onclick="approve('${b.id}')">${s==='ok'?'✓ Одобрено':'Одобрить'} <span class="kbd">A</span></button>
+  <button class="btn" onclick="blockComment(event,'${b.id}')">Замечание к блоку <span class="kbd">C</span></button>
+  <button class="linkish" onclick="toggleSrc('${b.id}')">${showSrc.has(b.id)?'скрыть оригинал':'оригинал (EN)'}</button></div>`}
+
+window.approve=id=>{const s=st[id];s.status=s.status==='ok'?(s.comments.length?'cm':'new'):'ok';if(s.status==='ok'){s.comments=[]}
+  if(layout==='A'&&s.status==='ok') cur=nextOpen(cur); render()};
+window.toggleSrc=id=>{showSrc.has(id)?showSrc.delete(id):showSrc.add(id);render()};
+window.delCmt=(id,i)=>{st[id].comments.splice(i,1);if(!st[id].comments.length&&st[id].status==='cm')st[id].status='new';render()};
+function nextOpen(i){for(let k=1;k<=blocks.length;k++){const j=(i+k)%blocks.length;if(!['ok'].includes(st[blocks[j].id].status))return j}return i}
+
+/* ---------- layouts ---------- */
+function renderA(){const b=blocks[cur];return `<div class="A">
+  <div class="dots">${blocks.map((x,i)=>`<button title="${x.title}" class="${st[x.id].status==='ok'?'ok':st[x.id].status==='cm'?'cm':''} ${i===cur?'cur':''}" onclick="go(${i})"></button>`).join('')}</div>
+  <div class="card"><div class="hd"><span class="tag">${b.tag} · ${cur+1} из ${blocks.length}</span>${badge(b.id)}</div>
+  <h2>${b.title}</h2>${content(b)}${acts(b)}</div>
+  <div class="nav"><span><span class="kbd">←</span> <span class="kbd">→</span> листать · выделите текст, чтобы прокомментировать</span><span>${blocks.length-blocks.filter(x=>st[x.id].status==='ok').length} осталось</span></div></div>`}
+window.go=i=>{cur=i;render()};
+
+function renderB(){
+  const all=blocks.flatMap(b=>st[b.id].comments.map(c=>({...c,id:b.id,title:b.title})));
+  return `<div class="B"><nav class="toc">${blocks.map(b=>`<a href="#b-${b.id}"><span class="dot ${st[b.id].status}"></span>${b.title}</a>`).join('')}</nav>
+  <div class="doc"><h1 style="margin:4px 0 2px;font-size:26px">Экспорт заказов в CSV</h1><div style="color:var(--muted);font-size:13px;margin-bottom:18px">spec.md · 9 блоков · выделите текст, чтобы оставить замечание</div>
+  ${blocks.map(b=>`<section class="blk ${st[b.id].status}" id="b-${b.id}"><div class="hd"><div><span class="tag">${b.tag}</span><h3>${b.title}</h3></div>${badge(b.id)}</div>${content(b).replace(/<div class="cmts">[\s\S]*<\/div>$/,'')}${acts(b)}</section>`).join('')}
+  </div><aside class="rail"><h4>Замечания · ${all.length}</h4>${all.length?all.map(c=>`<div class="cmt" style="margin-bottom:8px"><a href="#b-${c.id}" style="font-size:12px;color:var(--muted)">${c.title}</a>${c.quote?`<q>${esc(c.quote)}</q>`:''}<span class="k">${c.kind}</span>${esc(c.text)}</div>`).join(''):'<div style="color:var(--muted);font-size:13.5px">Пока нет. Выделите фрагмент текста или нажмите «Замечание к блоку».</div>'}</aside></div>`}
+
+function renderC(){
+  const groups=[...new Set(blocks.map(b=>b.tag))];
+  return `<div class="C">${groups.map(g=>`<div class="grp">${g}</div>${blocks.filter(b=>b.tag===g).map(b=>{const s=st[b.id].status;return `
+   <div class="row"><div class="rh" onclick="tog('${b.id}')">
+     <span class="ck ${s==='ok'?'ok':s==='cm'?'cm':''}" onclick="event.stopPropagation();approve('${b.id}')">${s==='ok'?'✓':s==='cm'?'!':''}</span>
+     <span class="id">${b.id.length<4?b.id:''}</span>
+     <span class="t">${b.tldr}${b.flag?' <span class="st cm">⚑ решение агента</span>':''}</span>${badge(b.id)}</div>
+     ${open.has(b.id)?`<div class="rb">${content(b).replace(/<div class="tldr"[\s\S]*?<\/div>/,'')}${acts(b)}</div>`:''}</div>`}).join('')}`).join('')}
+   <div style="text-align:right;margin-top:12px"><button class="btn" onclick="approveRest()">Одобрить все без замечаний и флагов</button></div></div>`}
+window.tog=id=>{open.has(id)?open.delete(id):open.add(id);render()};
+window.approveRest=()=>{blocks.forEach(b=>{if(st[b.id].status==='new'&&!b.flag)st[b.id].status='ok'});render()};
+
+/* ---------- render + highlights ---------- */
+function render(){
+  app.innerHTML=layout==='A'?renderA():layout==='B'?renderB():renderC();
+  document.querySelectorAll('#layoutSeg button').forEach(b=>b.classList.toggle('on',b.dataset.v===layout));
+  round_.textContent='Раунд '+round;
+  const n=blocks.length,ok=blocks.filter(b=>st[b.id].status==='ok').length,cm=blocks.filter(b=>st[b.id].status==='cm').length;
+  bar.innerHTML=`<i style="width:${ok/n*100}%;background:var(--ok)"></i><i style="width:${cm/n*100}%;background:var(--cm-strong)"></i>`;
+  ptext.textContent=`${ok}/${n} одобрено`+(cm?` · ${cm} с замечаниями`:'');
+  const pending=n-ok-cm;
+  submit.disabled=pending>0; submit.textContent=pending>0?`Осталось ${pending}`:cm?`Отправить замечания (${cm})`:'Ревью пройдено ✓';
+  // paint quotes
+  document.querySelectorAll('[data-sel]').forEach(el=>{st[el.dataset.sel].comments.forEach(c=>{if(c.quote)paint(el,c.quote)})});
+}
+const round_=document.getElementById('round');
+function paint(el,q){const w=document.createTreeWalker(el,NodeFilter.SHOW_TEXT);let n;while(n=w.nextNode()){const i=n.data.indexOf(q);if(i>=0){const r=document.createRange();r.setStart(n,i);r.setEnd(n,i+q.length);const m=document.createElement('mark');m.className='cm';r.surroundContents(m);return}}}
+
+/* ---------- commenting ---------- */
+let pop=null;
+function closePop(){pop&&pop.remove();pop=null}
+function openPop(x,y,id,quote){closePop();let kind='правка';
+  pop=document.createElement('div');pop.className='pop';pop.style.left=Math.min(x,innerWidth-310)+'px';pop.style.top=(y+scrollY+8)+'px';
+  pop.innerHTML=`${quote?`<div style="font-size:12px;color:var(--muted);max-width:280px;margin-bottom:4px">«${esc(quote)}»</div>`:''}
+   <div class="kinds">${['правка','вопрос','неясно'].map(k=>`<button class="${k===kind?'on':''}" data-k="${k}">${k}</button>`).join('')}</div>
+   <textarea placeholder="Что не так?"></textarea><div class="actions" style="margin-top:6px"><button class="btn primary">Сохранить</button><button class="btn" data-c>Отмена</button></div>`;
+  document.body.appendChild(pop);const ta=pop.querySelector('textarea');ta.focus();
+  pop.querySelector('.kinds').onclick=e=>{if(e.target.dataset.k){kind=e.target.dataset.k;pop.querySelectorAll('.kinds button').forEach(b=>b.classList.toggle('on',b.dataset.k===kind))}};
+  pop.querySelector('[data-c]').onclick=closePop;
+  pop.querySelector('.primary').onclick=()=>{if(!ta.value.trim())return;st[id].comments.push({quote,text:ta.value.trim(),kind});st[id].status='cm';closePop();render()};
+}
+window.blockComment=(e,id)=>{const r=e.target.getBoundingClientRect();openPop(r.left,r.bottom,id,'')};
+document.addEventListener('mouseup',e=>{if(pop&&pop.contains(e.target))return;
+  const s=getSelection();if(!s||s.isCollapsed)return;const t=s.toString().trim();if(t.length<2)return;
+  const el=(s.anchorNode.nodeType===3?s.anchorNode.parentElement:s.anchorNode).closest('[data-sel]');if(!el)return;
+  const r=s.getRangeAt(0).getBoundingClientRect();
+  closePop();pop=document.createElement('div');pop.className='pop';pop.style.left=r.left+'px';pop.style.top=(r.bottom+scrollY+6)+'px';
+  pop.innerHTML='<button class="btn primary" style="font-size:13px">💬 Комментировать</button>';document.body.appendChild(pop);
+  pop.firstChild.onmousedown=ev=>{ev.preventDefault();openPop(r.left,r.bottom,el.dataset.sel,t)};
+});
+document.addEventListener('mousedown',e=>{if(pop&&!pop.contains(e.target))closePop()});
+document.addEventListener('keydown',e=>{if(e.target.tagName==='TEXTAREA')return;
+  if(layout==='A'&&e.key==='ArrowRight'){cur=(cur+1)%blocks.length;render()}
+  if(layout==='A'&&e.key==='ArrowLeft'){cur=(cur-1+blocks.length)%blocks.length;render()}
+  if(layout==='A'&&(e.key==='a'||e.key==='ф'))approve(blocks[cur].id);
+  if(layout==='A'&&(e.key==='c'||e.key==='с')){const b=document.querySelector('.card .actions .btn:nth-child(2)');b&&b.click()}
+});
+
+/* ---------- submit / round 2 ---------- */
+submit.onclick=()=>{
+  const fb=blocks.filter(b=>st[b.id].status==='cm').map(b=>({block:b.id,comments:st[b.id].comments}));
+  const payload=fb.length?{result:'changes_requested',round,approved:blocks.filter(b=>st[b.id].status==='ok').map(b=>b.id),feedback:fb}:{result:'approved',round};
+  const m=document.createElement('div');m.className='modal';
+  m.innerHTML=`<div><h3 style="margin-top:0">${fb.length?'Замечания отправлены в сессию':'Ревью пройдено'}</h3>
+   <p style="color:var(--muted);font-size:14px">${fb.length?'Агент правит spec.md и пересобирает только затронутые блоки. Вкладка обновится сама.':'Сессия получила аппрув и идёт дальше: /inspec:plan.'}</p>
+   <pre>${esc(JSON.stringify(payload,null,2))}</pre>
+   <div class="actions">${fb.length?'<button class="btn primary" id="r2">Показать раунд 2 (демо)</button>':''}<button class="btn" id="cl">Закрыть</button></div></div>`;
+  document.body.appendChild(m);m.querySelector('#cl').onclick=()=>m.remove();
+  const r2=m.querySelector('#r2');if(r2)r2.onclick=()=>{m.remove();toRound2()};
+};
+function toRound2(){round=2;
+  blocks.forEach(b=>{const s=st[b.id];
+    if(s.status==='ok'){s.carried=true;return}
+    if(R2_PATCH[b.id]){Object.assign(b,R2_PATCH[b.id]);s.status='chg';s.comments=[];open.add(b.id)}
+    else {s.status='new';s.comments=[]} });
+  // demo: if user commented on other blocks, they just come back as "new"
+  cur=blocks.findIndex(b=>st[b.id].status!=='ok');if(cur<0)cur=0;render()}
+// in round 2 approving a changed block works like any other
+const _ap=window.approve;window.approve=id=>{if(st[id].status==='chg'){st[id].status='ok';if(layout==='A')cur=nextOpen(cur);render()}else _ap(id)};
+
+render();
+</script>
+</body>
+</html>
