@@ -28,6 +28,15 @@ export function inline(src) {
   return s;
 }
 
+// Diagram text (S23): backtick spans become code, everything else stays text, markdown and HTML alike.
+export function code(src) {
+  const held = [];
+  const s = String(src ?? '')
+    .replace(/\u0000/g, '')
+    .replace(CODE_SPAN, (_, _ticks, c) => `\u0000${held.push(`<code>${esc(c.length > 2 && c.startsWith(' ') && c.endsWith(' ') ? c.slice(1, -1) : c)}</code>`) - 1}\u0000`);
+  return esc(s).replace(/\u0000(\d+)\u0000/g, (_, i) => held[i]);
+}
+
 const FENCE = /^ {0,3}(`{3,}|~{3,})/;
 const HEADING = /^ {0,3}(#{1,6})\s+(.*?)(?:\s+#+)?\s*$/;
 const ITEM = /^(\s*)([-*+]|\d{1,9}[.)])\s+(.*)$/;

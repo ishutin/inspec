@@ -110,8 +110,9 @@ ins{background:var(--ins);text-decoration:none}
 
 /* diagrams */
 .dia{margin:18px 0 6px}
+.dia figcaption{display:block}
 .dia .cap{font-size:11.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
-.mx{display:grid;grid-template-columns:auto 1fr 1fr;gap:6px;font-size:14px;line-height:1.45}
+.mx{display:grid;grid-template-columns:auto repeat(var(--cols,2),minmax(0,1fr));gap:6px;font-size:14px;line-height:1.45}
 .mx>div{padding:10px 12px;border-radius:8px;background:var(--soft);color:var(--ink-2)}
 .mx .h{background:none;color:var(--muted);font-size:12.5px;padding:4px 12px}
 .mx .r{background:none;color:var(--ink);font-weight:600;font-size:13.5px;display:flex;align-items:center;padding-left:0}

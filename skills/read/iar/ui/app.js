@@ -1,7 +1,7 @@
 // The review page: topic list, focus card, keyboard, approve, comments by selection or on the block, submit,
 // 3 s polling, round switch, Reconnecting…, theme, narrow layout and diagrams (spec S10, S15–S23).
 // Every display text goes through md.js and sits inside [data-content]; the chrome is English.
-import { esc, inline, block } from './md.js';
+import { esc, inline, block, code } from './md.js';
 
 const [token, slug, kind] = location.pathname.split('/').filter(Boolean).map(decodeURIComponent);
 const API = `/${encodeURIComponent(token)}/api/${encodeURIComponent(slug)}/${encodeURIComponent(kind)}`;
@@ -261,8 +261,42 @@ function badge(e) {
   return `<span class="st ${esc(e.status)}">${t}</span>`;
 }
 
-// Diagrams (S23) have their own renderer; until it is there, a block shows its text, which the diagram only repeats.
-const diagram = () => '';
+// ---------- diagrams (S23) ----------
+// Typed entries drawn as elements; every text goes through md.js `code`: backtick spans as code, the rest as text.
+// A matrix's column count goes to CSS as --cols after render (the CSP allows no inline style attribute).
+const TONE = { ok: 'ok', changed: 'chg', new: 'new', warn: 'cm' };
+const DIAGRAMS = {
+  flow: (g) =>
+    `<ol class="flow">${g.steps.map((x) => `<li><div class="n${x.actor === 'you' ? ' you' : ''}"><b class="lb">${code(x.label)}</b>${code(x.text)}</div></li>`).join('')}</ol>${
+      g.loop ? `<div class="note">↺ ${code(g.loop)}</div>` : ''
+    }`,
+  matrix: (g) =>
+    `<div class="mx" data-cols="${g.cols.length}"><div class="h"></div>${g.cols.map((c) => `<div class="h">${code(c)}</div>`).join('')}${g.rows
+      .map(
+        (r) =>
+          `<div class="r">${code(r.label)}</div>${r.cells
+            .map((c) => `<div>${c.tag ? `<span class="st ${TONE[c.tone] || 'new'}">${code(c.tag)}</span><br>` : ''}${code(c.text)}</div>`)
+            .join('')}`,
+      )
+      .join('')}</div>`,
+  states: (g) =>
+    `<div class="stt">${g.transitions.map((t) => `<span class="s">${code(t.from)}</span><span class="ar">→</span><span class="s">${code(t.to)}</span><span class="on">${code(t.on)}</span>`).join('')}</div>`,
+  compare: (g) => `<div class="cmp"><div><b class="lb">${code(g.before.label)}</b>${code(g.before.text)}</div><div class="after"><b class="lb">${code(g.after.label)}</b>${code(g.after.text)}</div></div>`,
+};
+
+function diagram(g) {
+  const draw = g && Object.hasOwn(DIAGRAMS, g.type) && DIAGRAMS[g.type];
+  if (!draw) return '';
+  let inner;
+  try {
+    inner = draw(g);
+  } catch {
+    return ''; // open checks the schema (S5); a broken entry shows the body alone
+  }
+  return `<figure class="dia" data-content data-type="${esc(g.type)}">${g.caption ? `<figcaption class="cap">${code(g.caption)}</figcaption>` : ''}${inner}${
+    g.note ? `<div class="note">${code(g.note)}</div>` : ''
+  }</figure>`;
+}
 
 function toc() {
   let section = null;
@@ -374,6 +408,7 @@ function render() {
     const c = nav.querySelector('a.cur');
     if (c) c.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   }
+  for (const mx of document.querySelectorAll('.card .mx[data-cols]')) mx.style.setProperty('--cols', mx.dataset.cols);
   highlight();
   header();
 }

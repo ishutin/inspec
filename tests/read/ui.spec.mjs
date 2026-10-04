@@ -602,3 +602,76 @@ test('S16 comment on a selection with a kind, its highlight, and approve asking 
   await expect(c.locator('.cmts .cmt')).toHaveCount(1);
   await expect(c.locator('.cmts .cmt.old .reply')).toContainText('So the tab can reconnect.');
 });
+
+const DIAGRAMS = {
+  S1: { type: 'flow', caption: 'Flow `cap`', note: 'Flow note', steps: [{ label: 'Prepare', text: 'runs `iar prepare`', actor: 'you' }, { label: 'Open', text: 'a **bold** <b>raw</b> step' }, { label: 'Wait', text: 'until <script>window.__x=1</script> submit' }], loop: 'Again from `prepare`' },
+  S2: { type: 'matrix', caption: 'Matrix cap', cols: ['Before', 'After `now`'], rows: [{ label: 'Hash *it*', cells: [{ text: 'same' }, { text: 'kept `ok`', tag: 'Approved', tone: 'ok' }] }, { label: 'Row two', cells: [{ text: '<img src=x onerror="window.__x=2">', tag: 'Changed', tone: 'changed' }, { text: 'new cell', tone: 'warn' }] }] },
+  S3: { type: 'states', note: 'States note', transitions: [{ from: 'new', to: 'ok', on: 'Approve `↵`' }, { from: 'ok', to: 'chg', on: 'an [edit](javascript:window.__x=3)' }] },
+  S4: { type: 'compare', caption: 'Compare cap', before: { label: 'Before', text: 'one `tab`' }, after: { label: 'After', text: 'same <u>tab</u>' } },
+};
+
+// Every text an entry holds, as written (backticks stripped where they make code).
+function texts(g) {
+  const out = [];
+  const walk = (v, k) => {
+    if (typeof v === 'string' && !['type', 'tone', 'actor'].includes(k)) out.push(v);
+    else if (v && typeof v === 'object') for (const [kk, x] of Object.entries(v)) walk(x, Array.isArray(v) ? k : kk);
+  };
+  walk(g);
+  return out;
+}
+
+test('S23 each diagram type renders every text, code spans as code, other markup inert; narrow forms', async ({ page }) => {
+  const d = setup('spec', (b) => ({ ...en(b), diagram: DIAGRAMS[b.id] || null }));
+  await page.goto(d.url);
+  const c = card(page);
+  for (const [id, g] of Object.entries(DIAGRAMS)) {
+    await topic(page, id).click();
+    const fig = c.locator('.dia[data-content]');
+    await expect(fig).toHaveCount(1);
+    await expect(fig).toHaveAttribute('data-type', g.type);
+    const text = (await fig.textContent()).replace(/\s+/g, ' ');
+    for (const t of texts(g)) expect(text, `${id}: ${t}`).toContain(t.replace(/`([^`]+)`/g, '$1'));
+    // Backtick spans are code; nothing else became an element of its own.
+    const codes = texts(g).flatMap((t) => [...t.matchAll(/`([^`]+)`/g)].map((m) => m[1]));
+    expect(await fig.locator('code').allTextContents()).toEqual(codes);
+    const live = await fig.evaluate((el) => [...el.querySelectorAll('strong, em, a, b:not(.lb), u, img, script')].map((e) => e.tagName));
+    expect(live, id).toEqual([]);
+  }
+  await topic(page, 'S1').click();
+  await expect(c.locator('.dia')).toContainText('a **bold** <b>raw</b> step');
+  await expect(c.locator('.dia')).toContainText('<script>window.__x=1</script>');
+  expect(await page.evaluate(() => window.__x)).toBeUndefined();
+  // The diagram sits between the body and the meta line.
+  expect(await c.evaluate((el) => [...el.children].map((e) => e.className.split(' ')[0]).filter((k) => ['body', 'dia', 'meta'].includes(k)))).toEqual(['body', 'dia', 'meta']);
+
+  const geometry = () =>
+    page.evaluate(() => {
+      const steps = [...document.querySelectorAll('.card .flow .n')].map((e) => e.getBoundingClientRect());
+      return { lefts: steps.map((r) => Math.round(r.left)), tops: steps.map((r) => Math.round(r.top)), wide: document.documentElement.scrollWidth > document.documentElement.clientWidth };
+    });
+  const matrixCols = () => c.locator('.mx').evaluate((el) => getComputedStyle(el).gridTemplateColumns.split(' ').length);
+
+  // Wide: the flow runs left to right, the matrix has a label column plus one per column.
+  let g = await geometry();
+  expect(new Set(g.tops).size).toBe(1);
+  expect(g.lefts).toEqual([...g.lefts].sort((a, b) => a - b));
+  await topic(page, 'S2').click();
+  expect(await matrixCols()).toBe(3);
+
+  // 760 px and less: the flow stacks, the matrix shows one column, no horizontal scroll.
+  for (const width of [760, 375]) {
+    await page.setViewportSize({ width, height: 800 });
+    await topic(page, 'S1').click();
+    g = await geometry();
+    expect(new Set(g.lefts).size, `${width}`).toBe(1);
+    expect(g.tops).toEqual([...g.tops].sort((a, b) => a - b));
+    expect(new Set(g.tops).size).toBe(3);
+    expect(g.wide).toBe(false);
+    for (const id of ['S2', 'S3', 'S4']) {
+      await topic(page, id).click();
+      if (id === 'S2') expect(await matrixCols()).toBe(1);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth), `${id} at ${width}`).toBe(false);
+    }
+  }
+});
