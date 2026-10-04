@@ -87,7 +87,7 @@ Log:
 ## D4 — Comments, theme, narrow layout and diagrams
 status: todo
 builds on: D3
-- [ ] S16
+- [x] S16
 - [ ] S19
 - [ ] S20
 - [ ] S23
@@ -95,6 +95,9 @@ Notes: selection → Comment with the three kinds, quote highlight, the delete-a
 System/Light/Dark switch with storage wrapped in try/catch; the ≤ 760 px topic row; the flow, matrix, states and
 compare renderers with their narrow forms. Diagram text goes through md.js's inline path so markup stays inert.
 ~380 lines.
+Log:
+- started from bf8564b (branch from feature/artifact-review-d3, one linear chain); S16, S19, S20, S23 red: ui.spec.mjs has no test for them (its 7 tests are green)
+- S16: selecting text inside one `[data-sel]` field of the card (tldr, flag, body, check; mouse or Shift+arrows) shows a "Comment" button that opens the comment box with the quote; save stores {quote, kind, text}, marks the block "Has comments", and `mark.cm` highlights the quote (matched with whitespace collapsed, across bold and code; earlier rounds' quotes dashed); approve on a block with this round's comments opens an in-page dialog "Delete N comments and approve?" ("comment" when N is 1, as D3's submit wording) with Yes/No (Enter = focused button, Escape and backdrop = No), replacing D3's `window.confirm`; Yes keeps earlier rounds' comments and replies; S10's test now also keeps a selection comment across reload, stop/open and prepare; test seen red on the missing Comment button
 
 ## D5 — The next round
 status: todo

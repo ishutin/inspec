@@ -1,5 +1,5 @@
-// The review page: topic list, focus card, keyboard, approve, comment on a block, submit,
-// 3 s polling, round switch and Reconnecting… (spec S10, S15, S17, S18, S21).
+// The review page: topic list, focus card, keyboard, approve, comments by selection or on the block, submit,
+// 3 s polling, round switch, Reconnecting…, theme, narrow layout and diagrams (spec S10, S15–S23).
 // Every display text goes through md.js and sits inside [data-content]; the chrome is English.
 import { esc, inline, block } from './md.js';
 
@@ -24,6 +24,7 @@ let dirty = false; // local edits not yet sent
 let sending = null;
 let again = false;
 let pop = null;
+let ask = null; // the open confirm dialog
 let timer = null;
 let toastTimer = null;
 let pushes = 0; // PUTs started: a poll that overlapped one reads again instead of taking a stale copy
@@ -74,18 +75,49 @@ function change() {
 }
 
 function approve() {
-  if (!canEdit()) return;
-  const e = entry(doc.blocks[cur].id);
-  if (e.status === 'ok') e.status = 'new';
-  else {
-    const n = mine(e).length;
-    if (n && !window.confirm(`Delete ${n} comment${n === 1 ? '' : 's'} and approve?`)) return;
+  if (!canEdit() || ask) return;
+  const id = doc.blocks[cur].id;
+  const e = entry(id);
+  if (e.status === 'ok') {
+    e.status = 'new';
+    closePop();
+    return change();
+  }
+  const yes = () => {
+    if (!canEdit() || doc.blocks[cur]?.id !== id) return;
+    // This round's comments go; earlier rounds' comments and their replies stay.
     e.comments = e.comments.filter((c) => !own(c));
     e.status = 'ok';
     cur = nextOpen(cur);
-  }
+    change();
+  };
   closePop();
-  change();
+  const n = mine(e).length;
+  if (n) confirmBox(`Delete ${n} comment${n === 1 ? '' : 's'} and approve?`, yes);
+  else yes();
+}
+
+// An in-page Yes/No dialog; Enter answers with the focused button (Yes first), Escape is No.
+function confirmBox(text, onYes) {
+  closeAsk();
+  ask = document.createElement('div');
+  ask.className = 'modal';
+  ask.innerHTML = `<div role="dialog" aria-modal="true" aria-label="Confirm"><p class="q"></p><div class="actions"><button type="button" class="btn primary" data-ask="yes">Yes</button><button type="button" class="btn" data-ask="no">No</button></div></div>`;
+  ask.querySelector('.q').textContent = text;
+  ask.addEventListener('click', (ev) => {
+    const t = ev.target.closest('[data-ask]');
+    if (!t && ev.target !== ask) return;
+    const ok = t && t.dataset.ask === 'yes';
+    closeAsk();
+    if (ok) onYes();
+  });
+  document.body.append(ask);
+  ask.querySelector('[data-ask="yes"]').focus();
+}
+
+function closeAsk() {
+  if (ask) ask.remove();
+  ask = null;
 }
 
 function removeComment(k) {
@@ -153,6 +185,7 @@ function adopt(p, raw) {
     dirty = false;
     showSrc.clear();
     closePop();
+    closeAsk();
     const i = p.blocks.findIndex((b) => entry(b.id).status !== 'ok');
     cur = i < 0 ? 0 : i;
   } else {
@@ -165,6 +198,7 @@ function offline() {
   if (!online) return;
   online = false;
   closePop();
+  closeAsk();
   render();
 }
 
@@ -183,7 +217,7 @@ async function poll() {
       // Local edits go first; the server's copy is read again once they are sent.
       if (!sending) push();
       if (back) render();
-    } else if (raw !== seen && !(sameRound && pop)) {
+    } else if (raw !== seen && !(sameRound && (pop || ask))) {
       adopt(p, raw);
       render();
     } else if (back) render();
@@ -340,6 +374,7 @@ function render() {
     const c = nav.querySelector('a.cur');
     if (c) c.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   }
+  highlight();
   header();
 }
 
@@ -351,25 +386,123 @@ function toast(text) {
   toastTimer = setTimeout(() => (el.hidden = true), 5000);
 }
 
+// ---------- quote highlight ----------
+// Marks each comment's quote in the first [data-sel] field holding it. A quote may span elements (bold, code)
+// and its whitespace may differ from the text nodes' (a selection across lines), so both are compared collapsed.
+function highlight() {
+  const c = document.querySelector('.card');
+  if (!c || !doc.blocks[cur]) return;
+  const fields = [...c.querySelectorAll('[data-sel]')];
+  for (const cm of entry(doc.blocks[cur].id).comments) {
+    const q = (cm.quote || '').replace(/\s+/g, ' ').trim();
+    if (q) fields.some((el) => paint(el, q, own(cm)));
+  }
+}
+
+function paint(el, q, mineToo) {
+  const nodes = [];
+  const w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+  for (let n; (n = w.nextNode()); ) nodes.push(n);
+  // The collapsed text, with each of its characters' node and offset.
+  let text = '';
+  const where = [];
+  let space = true;
+  for (const n of nodes) {
+    for (let k = 0; k < n.data.length; k++) {
+      const ch = n.data[k];
+      if (/\s/.test(ch)) {
+        if (space) continue;
+        space = true;
+        text += ' ';
+      } else {
+        space = false;
+        text += ch;
+      }
+      where.push([n, k]);
+    }
+  }
+  const at = text.indexOf(q);
+  if (at < 0) return false;
+  const [n0, k0] = where[at];
+  const [n1, k1] = where[at + q.length - 1];
+  // Wrap the matched part of each text node, last first so earlier offsets stay valid.
+  const parts = [];
+  for (let i = nodes.indexOf(n0); i <= nodes.indexOf(n1); i++) {
+    const n = nodes[i];
+    const a = n === n0 ? k0 : 0;
+    const b = n === n1 ? k1 + 1 : n.data.length;
+    if (b > a && n.data.slice(a, b).trim()) parts.push([n, a, b]);
+  }
+  for (const [n, a, b] of parts.reverse()) {
+    const r = document.createRange();
+    r.setStart(n, a);
+    r.setEnd(n, b);
+    const m = document.createElement('mark');
+    m.className = mineToo ? 'cm' : 'cm old';
+    r.surroundContents(m);
+  }
+  return true;
+}
+
+// ---------- selection → Comment ----------
+// The selection must lie in one [data-sel] field of the focused card.
+function selectionQuote() {
+  const s = getSelection();
+  if (!s || s.isCollapsed || !s.rangeCount) return null;
+  const q = s.toString().replace(/\s+/g, ' ').trim();
+  if (!q) return null;
+  const field = (n) => (n && (n.nodeType === 3 ? n.parentElement : n))?.closest('.card [data-sel]');
+  const el = field(s.anchorNode);
+  if (!el || el !== field(s.focusNode)) return null;
+  return { quote: q, rect: s.getRangeAt(0).getBoundingClientRect() };
+}
+
+function offerComment() {
+  if (!canEdit() || ask || (pop && !pop.sel)) return;
+  const sel = selectionQuote();
+  if (!sel) {
+    if (pop && pop.sel) closePop();
+    return;
+  }
+  closePop();
+  pop = document.createElement('div');
+  pop.className = 'pop sel';
+  pop.sel = true;
+  pop.innerHTML = '<button type="button" class="btn primary">Comment</button>';
+  place(pop, sel.rect);
+  document.body.append(pop);
+  // mousedown, not click: the selection would collapse first.
+  pop.firstChild.addEventListener('mousedown', (ev) => {
+    ev.preventDefault();
+    ev.stopPropagation(); // the document's mousedown would close the box this opens
+    openComment(sel.quote, sel.rect);
+  });
+  pop.firstChild.addEventListener('click', () => openComment(sel.quote, sel.rect));
+}
+
+function place(el, r) {
+  el.style.left = `${Math.max(8, Math.min(r.left + scrollX, scrollX + innerWidth - 310))}px`;
+  el.style.top = `${r.bottom + scrollY + 6}px`;
+}
+
 // ---------- comment box ----------
 function closePop() {
   if (pop) pop.remove();
   pop = null;
 }
 
-function openComment(quote = '') {
-  if (!canEdit()) return;
+function openComment(quote = '', rect = null) {
+  if (!canEdit() || ask) return;
   closePop();
   const id = doc.blocks[cur].id;
-  const anchor = document.querySelector('.card [data-act="comment"]');
-  const r = anchor.getBoundingClientRect();
+  const r = rect || document.querySelector('.card [data-act="comment"]').getBoundingClientRect();
   let k = 'change';
   pop = document.createElement('div');
   pop.className = 'pop';
   pop.innerHTML = `${quote ? `<div class="pq" data-content>“${esc(quote)}”</div>` : ''}<div class="kinds">${KINDS.map((x) => `<button type="button" data-k="${x}" class="${x === k ? 'on' : ''}">${x}</button>`).join('')}</div><textarea data-content placeholder="${PLACEHOLDER[k]}"></textarea><div class="actions"><button type="button" class="btn primary" data-pop="save">Save</button><button type="button" class="btn" data-pop="cancel">Cancel</button></div>`;
-  pop.style.left = `${Math.max(8, Math.min(r.left + scrollX, scrollX + innerWidth - 310))}px`;
-  pop.style.top = `${r.bottom + scrollY + 6}px`;
+  place(pop, r);
   document.body.append(pop);
+  getSelection().removeAllRanges();
   const ta = pop.querySelector('textarea');
   ta.focus();
   pop.addEventListener('click', (ev) => {
@@ -428,8 +561,23 @@ document.addEventListener('mousedown', (ev) => {
   if (pop && !pop.contains(ev.target) && !ev.target.closest('[data-act="comment"]')) closePop();
 });
 
+document.addEventListener('mouseup', (ev) => {
+  if (!doc || (pop && pop.contains(ev.target))) return;
+  setTimeout(offerComment);
+});
+
 document.addEventListener('keydown', (ev) => {
   if (!doc) return;
+  if (ask) {
+    if (ev.key === 'Escape') {
+      ev.preventDefault();
+      closeAsk();
+    } else if (ev.key === 'Enter') {
+      ev.preventDefault();
+      (ask.contains(document.activeElement) && document.activeElement.closest('[data-ask]') ? document.activeElement : ask.querySelector('[data-ask="yes"]')).click();
+    } else if (ev.key !== 'Tab') ev.preventDefault();
+    return;
+  }
   if (pop && pop.contains(ev.target)) {
     if (ev.key === 'Escape') closePop();
     else if (ev.key === 'Enter' && (ev.metaKey || ev.ctrlKey)) {
@@ -439,6 +587,7 @@ document.addEventListener('keydown', (ev) => {
     return;
   }
   if (ev.key === 'Escape' && pop) return closePop();
+  if (ev.shiftKey && ev.key.startsWith('Arrow')) return setTimeout(offerComment); // a keyboard selection
   if (ev.metaKey || ev.ctrlKey || ev.altKey) return;
   if (ev.target.closest && ev.target.closest('input, textarea, select, [contenteditable]')) return;
   if (ev.key === 'ArrowDown' || ev.code === 'KeyJ') {

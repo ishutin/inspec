@@ -1,4 +1,4 @@
-// The review page (spec rows S10, S15, S17, S18, S21, S22), driven in Chromium against a real server.
+// The review page (spec rows S10, S15, S16, S17, S18, S19, S20, S21, S22, S23), driven in Chromium against a real server.
 import { test, expect } from '@playwright/test';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -68,6 +68,49 @@ const statusOf = (d, id) => expect.poll(async () => (await serverReview(d)).bloc
 
 const topic = (page, id) => page.locator(`.toc a.topic[data-id="${id}"]`);
 const card = (page) => page.locator('.card');
+
+// Selects `text` inside `loc` with the mouse, from its first character to its last (it may span elements).
+async function selectText(page, loc, text) {
+  const pts = await loc.evaluate((el, t) => {
+    const nodes = [];
+    const w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    for (let n; (n = w.nextNode()); ) nodes.push(n);
+    const all = nodes.map((n) => n.data).join('');
+    const at = all.indexOf(t);
+    if (at < 0) throw new Error(`no "${t}" in "${all}"`);
+    const pos = (k) => {
+      for (const n of nodes) {
+        if (k < n.data.length) return [n, k];
+        k -= n.data.length;
+      }
+    };
+    const rect = (k) => {
+      const [n, o] = pos(k);
+      const r = document.createRange();
+      r.setStart(n, o);
+      r.setEnd(n, o + 1);
+      return r.getBoundingClientRect();
+    };
+    const a = rect(at);
+    const b = rect(at + t.length - 1);
+    return { x0: a.left + 1, y0: a.top + a.height / 2, x1: b.right - 1, y1: b.top + b.height / 2 };
+  }, text);
+  await page.mouse.move(pts.x0, pts.y0);
+  await page.mouse.down();
+  await page.mouse.move((pts.x0 + pts.x1) / 2, (pts.y0 + pts.y1) / 2, { steps: 3 });
+  await page.mouse.move(pts.x1, pts.y1, { steps: 3 });
+  await page.mouse.up();
+  expect(await page.evaluate(() => getSelection().toString())).toBe(text);
+}
+
+// Clicks "Comment" on the selection, picks the kind, writes and saves.
+async function commentOnSelection(page, kind, text) {
+  await page.locator('.pop').getByRole('button', { name: 'Comment', exact: true }).click();
+  await page.locator(`.pop .kinds button[data-k="${kind}"]`).click();
+  await page.locator('.pop textarea').fill(text);
+  await page.locator('.pop').getByRole('button', { name: 'Save' }).click();
+  await expect(page.locator('.pop')).toHaveCount(0);
+}
 
 test('S15 the topic list, the focus card, clicks and the keyboard', async ({ page }) => {
   const d = setup('spec');
@@ -175,13 +218,21 @@ test('S10 approvals stay after a reload, a server stop and open, and a prepare r
   await page.keyboard.press('Enter');
   await expect(card(page).locator('h2')).toHaveText('Name of D2');
   await statusOf(d, 'D1').toBe('ok');
+  // A comment on D2 by selection (S16).
+  await selectText(page, card(page).locator('.tldr'), 'of D2');
+  await commentOnSelection(page, 'unclear', 'Which D2?');
+  await statusOf(d, 'D2').toBe('cm');
 
   const holds = async () => {
     await expect(topic(page, 'D1').locator('.dot')).toHaveClass(/\bok\b/);
-    await expect(topic(page, 'D2').locator('.dot')).toHaveClass(/\bnew\b/);
+    await expect(topic(page, 'D2').locator('.dot')).toHaveClass(/\bcm\b/);
+    await topic(page, 'D2').click();
+    await expect(card(page).locator('.cmts .cmt')).toHaveCount(1);
+    await expect(card(page).locator('.cmts .cmt')).toContainText('Which D2?');
+    await expect(card(page).locator('.tldr mark.cm')).toHaveText('of D2');
     await topic(page, 'D1').click();
     await expect(card(page).locator('.hd .st')).toHaveText('Approved');
-    await expect(page.locator('#submit')).toHaveText('1 to review');
+    await expect(page.locator('#submit')).toHaveText('Send 1 comment');
   };
   await page.reload();
   await holds();
@@ -445,4 +496,109 @@ test('S22 display markdown renders as elements; raw HTML, scripts and javascript
     x: window.__x,
   }));
   expect(live).toEqual({ tags: [], handlers: 0, x: undefined });
+});
+
+test('S16 comment on a selection with a kind, its highlight, and approve asking to delete this round\'s comments', async ({ page }) => {
+  const d = setup('plan', (b) => ({
+    ...en(b),
+    tldr: `The server keeps **running** after a submit of ${b.id}.`,
+    body: `First line of ${b.id}.\n\nThe page reads \`result.json\` again.`,
+    check: `Proved by \`npm test\` for ${b.id}.`,
+  }));
+  await page.goto(d.url);
+  await expect(card(page).locator('h2')).toHaveText('Name of D1');
+  const c = card(page);
+
+  // A selection across the bold word shows "Comment"; saving with a kind stores the quote, highlights it, marks the block.
+  await selectText(page, c.locator('.tldr'), 'keeps running after');
+  await expect(page.locator('.pop').getByRole('button', { name: 'Comment', exact: true })).toBeVisible();
+  await commentOnSelection(page, 'question', 'Why keep it running?');
+  await expect(c.locator('.hd .st')).toHaveText('Has comments');
+  await expect(topic(page, 'D1').locator('.dot')).toHaveClass(/\bcm\b/);
+  expect((await c.locator('.tldr mark.cm').allTextContents()).join('')).toBe('keeps running after');
+  await expect(c.locator('.cmts .cmt').first()).toContainText('keeps running after');
+  await expect(c.locator('.cmts .cmt').first()).toContainText('question');
+
+  // The other two kinds, in the body and the check.
+  await selectText(page, c.locator('.body'), 'reads result.json');
+  await commentOnSelection(page, 'change', 'Say which file.');
+  await selectText(page, c.locator('.meta .ck'), 'npm test');
+  await commentOnSelection(page, 'unclear', 'Which tests?');
+  await expect(c.locator('.body mark.cm')).toHaveText(['reads ', 'result.json']);
+  await expect(c.locator('.meta .ck mark.cm')).toHaveText('npm test');
+  await expect.poll(async () => (await serverReview(d)).blocks.D1.comments.map((x) => [x.kind, x.quote, x.text])).toEqual([
+    ['question', 'keeps running after', 'Why keep it running?'],
+    ['change', 'reads result.json', 'Say which file.'],
+    ['unclear', 'npm test', 'Which tests?'],
+  ]);
+  expect((await serverReview(d)).blocks.D1.status).toBe('cm');
+  await expect(page.locator('#submit')).toHaveText('1 to review');
+
+  // A whole-block comment has an empty quote.
+  await page.keyboard.press('c');
+  await page.locator('.pop textarea').fill('The whole block.');
+  await page.locator('.pop').getByRole('button', { name: 'Save' }).click();
+  await expect.poll(async () => (await serverReview(d)).blocks.D1.comments.at(-1).quote).toBe('');
+
+  // The highlight is still there after a reload.
+  await page.reload();
+  expect((await c.locator('.tldr mark.cm').allTextContents()).join('')).toBe('keeps running after');
+
+  // Approve asks; No changes nothing.
+  const dialog = page.getByRole('dialog');
+  await c.getByRole('button', { name: 'Approve' }).click();
+  await expect(dialog).toContainText('Delete 4 comments and approve?');
+  await dialog.getByRole('button', { name: 'No' }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(c.locator('.hd .st')).toHaveText('Has comments');
+  await expect(c.locator('.cmts .cmt')).toHaveCount(4);
+  expect((await serverReview(d)).blocks.D1.comments).toHaveLength(4);
+  // Enter asks too; Escape is No.
+  await page.keyboard.press('Enter');
+  await expect(dialog).toContainText('Delete 4 comments and approve?');
+  await page.keyboard.press('Escape');
+  await expect(dialog).toHaveCount(0);
+  await expect(c.locator('h2')).toHaveText('Name of D1');
+  // Yes deletes them and approves.
+  await page.keyboard.press('Enter');
+  await dialog.getByRole('button', { name: 'Yes' }).click();
+  await expect(dialog).toHaveCount(0);
+  await statusOf(d, 'D1').toBe('ok');
+  expect((await serverReview(d)).blocks.D1.comments).toEqual([]);
+  await topic(page, 'D1').click();
+  await expect(c.locator('.hd .st')).toHaveText('Approved');
+  await expect(c.locator('.cmts, mark.cm')).toHaveCount(0);
+
+  // Earlier rounds' comments and replies stay.
+  await topic(page, 'D2').click();
+  await page.keyboard.press('Enter');
+  await statusOf(d, 'D2').toBe('ok');
+  expect((await fetch(`${d.api}/submit`, { method: 'POST' })).status).toBe(200);
+  fs.appendFileSync(docPath(d.repo, 'plan'), '\nOne more line.\n');
+  for (const b of prepare(d.repo, 'plan')) writeDisplay(b, en(b));
+  const file = `${stateDir(d.repo, 'plan')}/review.json`;
+  const rv = readJSON(file);
+  expect(rv.round).toBe(2);
+  rv.blocks.D1.comments = [{ id: 'c1-1', quote: 'keeps running after', kind: 'question', text: 'Why keep it running?', reply: 'So the tab can reconnect.', round: 1 }];
+  fs.writeFileSync(file, JSON.stringify(rv));
+  await page.reload();
+  await expect(page.locator('#round')).toHaveText('Round 2');
+  await topic(page, 'D1').click();
+  const old = c.locator('.cmts .cmt.old');
+  await expect(old).toContainText('Why keep it running?');
+  await expect(old.locator('.reply')).toContainText('Agent');
+  await expect(old.locator('.reply')).toContainText('So the tab can reconnect.');
+  await expect(old.getByRole('button', { name: 'remove' })).toHaveCount(0);
+  await selectText(page, c.locator('.tldr'), 'running after');
+  await commentOnSelection(page, 'change', 'A new one.');
+  await expect(c.locator('.cmts .cmt')).toHaveCount(2);
+  await c.getByRole('button', { name: 'Approve' }).click();
+  await expect(dialog).toContainText('Delete 1 comment and approve?');
+  await dialog.getByRole('button', { name: 'Yes' }).click();
+  await statusOf(d, 'D1').toBe('ok');
+  const kept = (await serverReview(d)).blocks.D1.comments;
+  expect(kept.map((x) => [x.id, x.reply])).toEqual([['c1-1', 'So the tab can reconnect.']]);
+  await topic(page, 'D1').click();
+  await expect(c.locator('.cmts .cmt')).toHaveCount(1);
+  await expect(c.locator('.cmts .cmt.old .reply')).toContainText('So the tab can reconnect.');
 });

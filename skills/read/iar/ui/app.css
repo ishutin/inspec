@@ -163,3 +163,8 @@ ins{background:var(--ins);text-decoration:none}
 .md th,.body th{color:var(--ink);font-weight:600}
 .md blockquote,.body blockquote{border-left:3px solid var(--line);padding-left:10px;color:var(--muted)}
 .tldr p,.flag p{margin:0}
+mark.cm.old{background:none;border-bottom-style:dashed}
+.modal{position:fixed;inset:0;background:#0007;display:grid;place-items:center;z-index:60;padding:16px}
+.modal>div{background:var(--panel);border-radius:14px;max-width:420px;width:100%;padding:20px;max-height:85vh;overflow:auto}
+.modal .q{margin:0;font-size:15px;color:var(--ink)}
+.pop.sel{padding:4px}.pop.sel .btn{font-size:13px}
