@@ -163,6 +163,8 @@ After release:
   hover, never as raw markdown; a link with another scheme stays inert text (S22). — check: `npx playwright test tests/read/qa-fixes.spec.mjs`
 - **S43** An inline code span with no space to break at (a long regex or path) wraps inside the card in the summary,
   body, source, comments and flag, at 1280 and 520, with no horizontal page scroll. — check: `npx playwright test tests/read/qa-fixes.spec.mjs`
+- **S44** brief, spec and plan offer the three ways once, when the document is complete, in the language the
+  operator writes in, never in the other replies of the step; an edit in chat brings the offer back once. — check: `grep -qF 'Ask it once' skills/brief/SKILL.md && grep -qF 'Ask it once' skills/spec/SKILL.md && grep -qF 'Ask it once' skills/plan/SKILL.md && grep -qF 'in the language they write in' skills/spec/SKILL.md`
 - **S41** brief, spec and plan ask "Agree as is, edit in chat, or open the review with /inspec:read." in plain
   text as the last line of the reply, not with a question tool. — check: `grep -qF 'not with a question tool' skills/brief/SKILL.md && grep -qF 'not with a question tool' skills/spec/SKILL.md && grep -qF 'not with a question tool' skills/plan/SKILL.md`
 

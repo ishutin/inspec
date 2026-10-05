@@ -57,10 +57,10 @@ builds on: D1
 - The checkboxes, `status`, `Log:`, `Review:` and `Blocked:` lines belong to `/inspec:build` and `/inspec:review`:
   written unchecked and `todo`.
 
-Ask the operator in plain text, as the last line of your reply, not with a question tool:
-"Agree as is, edit in chat, or open the review with /inspec:read."
-Edit in chat and ask again; for the review, follow `/inspec:read <slug> plan` on the file as it is until it comes
-back approved.
+Once the document is complete, ask the operator which way to go, not with a question tool but in plain text
+in the language they write in: agree as is, edit in chat, or open the review with /inspec:read. Ask it once,
+at this point only, never in the other replies of this step; after an edit in chat, ask again. For the review,
+follow `/inspec:read <slug> plan` on the file as it is until it comes back approved.
 
 Commit plan.md alone on `feature/<slug>` (`git commit -m "docs(<slug>): plan"`), switch back to the operator's
 branch, and report the deliveries in one line each.
