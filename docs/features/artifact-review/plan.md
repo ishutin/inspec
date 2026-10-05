@@ -231,3 +231,14 @@ Log:
 - S43: long inline code without spaces wraps anywhere in prose fields; red before
 - verify: put.test 3/3, S25 and S41 greps green, `npm test` green (node 25/25, Playwright 25/25)
 - done
+
+## D10 — The offer once, in the operator's language
+status: done
+builds on: D9
+- [x] S44
+Notes: in use, the English sentence closed almost every reply of brief, spec and plan, in any language. The skills
+now name the three ways and ask once, when the document is complete, in the operator's language.
+Log:
+- started from d0b2ed5 (main, 0.4.0); S44 red (phrases missing)
+- S44: brief, spec, plan reworded; S25 and S41 checks still green on the new wording
+- done

@@ -64,10 +64,10 @@ character. Length follows the change: a small one is short.
 
 Before committing, reread it: every outcome is one someone could observe, and no scenario step skips a choice.
 
-Then ask the operator in plain text, as the last line of your reply, not with a question tool:
-"Agree as is, edit in chat, or open the review with /inspec:read."
-Edit in chat and ask again; for the review, follow `/inspec:read <slug> intent` on the file as it is until it
-comes back approved. Commit once they agree.
+Once the document is complete, ask the operator which way to go, not with a question tool but in plain text
+in the language they write in: agree as is, edit in chat, or open the review with /inspec:read. Ask it once,
+at this point only, never in the other replies of this step; after an edit in chat, ask again. For the review,
+follow `/inspec:read <slug> intent` on the file as it is until it comes back approved. Commit once they agree.
 
 ## 4. Commit and hand off
 
