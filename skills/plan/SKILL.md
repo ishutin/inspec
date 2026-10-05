@@ -23,7 +23,8 @@ and Touches and the code they cite. Most features have one delivery.
 
 A bigger change is several. Each delivers behaviour its rows observe, never a layer (a schema PR, then an API
 PR); the first is the thinnest path through every layer; each leaves the product working. Every row belongs to
-exactly one delivery. `builds on` names the delivery whose code it needs; a delivery with none starts from the
+exactly one delivery. A one-way door from the spec's merge danger goes in its own delivery, kept as small as
+possible. `builds on` names the delivery whose code it needs; a delivery with none starts from the
 base.
 
 With one delivery, write it. With several, show one table (id, name, rows, estimate, builds on) and wait for

@@ -59,7 +59,10 @@ Sections:
 - **Contract** — rows `S1`, `S2`, … in the format of [references/criteria.md](references/criteria.md). Every
   intent outcome and the Headline scenario are covered by some row.
 - **Architecture** — the modules touched and where new code goes; the data and interfaces (types, files,
-  events, commands, endpoints) with their shapes; the decided mechanisms with their evidence and traps.
+  events, commands, endpoints) with their shapes; the decided mechanisms with their evidence and traps; and
+  the merge danger: whether the change holds a one-way door (irreversible on merge: a data migration or
+  deletion, messages sent to real people, a published API or format others depend on, money) and its blast
+  radius (what breaks, for whom, if it is wrong).
 - **Touches** — every instance the change applies to or alters, as populations: call sites, screens or scenes,
   endpoints or public symbols, readers of a changed value, state or format, neighbours that must behave alike,
   and the docs, CI and test commands that describe or run it (a new test nothing runs is a gap). Each with the
@@ -83,8 +86,10 @@ No promise without its bound ("retries", "is cached"): state the count, TTL or t
 prove what it says:
 1. **Observed, not inferred.** A check observes the outcome where its observer does (what is on screen, the
    response, the exit code and output, the file another program reads, the call a library's user makes),
-   through the real entry point, on real-shaped input. Internal state or a source grep may back a row, never
-   replace its check.
+   through the real entry point, on real-shaped input. A row's check exercises behaviour through the interface
+   (seam) the spec names, never internals: a check that stays green when the behaviour breaks but the names
+   stay (a constant equal to its literal) is red on the base only for want of the name. Internal state or a
+   source grep may back a row, never replace its check.
 2. **Every state decided.** A row holds in each state of States it can meet, and its check drives the ones a
    defect hides in: under input as well as at rest, after a restart, on the weakest supported device, on retry.
 3. **All means all.** A row with all, every, no, only or each checks the whole population from Touches, never

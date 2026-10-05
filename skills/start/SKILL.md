@@ -25,7 +25,7 @@ line where the feature stands, and runs the next step by following that step's s
 | intent or spec `todo` | the same step, to finish it |
 | spec `done`, no plan, or a spec row no delivery owns | plan |
 | a delivery `todo` (or `done` with an open Review item) whose `builds on` is done | build |
-| the last built delivery has no `Review:` line | offer review (recommend it when the build ran on a model below the strongest, or touched auth, money, stored data) |
+| the last built delivery has no `Review:` line | offer review (recommend it when the build ran on a model below the strongest, or touched auth, money, stored data, or holds a one-way door) |
 | a delivery `blocked` | show its reason and ask how to unblock |
 | every delivery `done` and reviewed or review declined | done: offer to push and open PRs, one per delivery |
 

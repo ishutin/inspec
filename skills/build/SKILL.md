@@ -34,8 +34,9 @@ Work through the open rows, then the open `Review:` items:
   by a missing import or file. Then implement until it holds.
 - Follow Architecture where it is right; where it is wrong, do what the rows need and log why. Never change
   what a row means to make it pass.
-- A review item: fix it, or answer it `— rejected: <concrete reason>` when it is not a defect.
-- Update the tests the notes say move, and the docs Touches names.
+- A review item left open: fix it, or answer it `— rejected: <concrete reason>` when it is not a defect.
+- Update the tests the notes say move, and the docs Touches names. Coding standards are enforced by
+  `/inspec:review`, not here.
 - After each item: check it off, add one line to `Log:` (what was done), and commit the code with that
   plan.md change. Never `git add -A`.
 
@@ -52,8 +53,9 @@ Work through the open rows, then the open `Review:` items:
 ## 4. Finish
 
 **Done**: every row and review item is checked. Set the delivery's `status: done` (and the frontmatter
-`status: done` when it was the last), log `- done`, and commit. Report the branch, the rows with their result
-and any deviation from the spec. Push or open a PR only when the operator asks.
+`status: done` when it was the last), log `- done`, add under the delivery `Merge danger: one-way|two-way door, blast radius: …` (from the spec's
+Architecture), and commit. Report the branch, the rows with their result
+and any deviation from the spec. Push or open a PR only when the operator asks; its description repeats the `Merge danger:` line.
 
 **Blocked**: a row stays red after three distinct attempts, the spec contradicts the code, or a product question
 comes up that the docs do not answer and the operator is not there. Commit the work so far, set the delivery's

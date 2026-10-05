@@ -9,7 +9,7 @@ where the feature stands and runs the next step.
 | `/inspec:spec` | `spec.md`: contract rows with checks proven red on the base, architecture, touches, states, references; the agreement | planning |
 | `/inspec:plan` | `plan.md`: deliveries (one PR each) by row id, with status, checkboxes, log | planning |
 | `/inspec:build` | code on `feature/<slug>[-d<n>]`; ticks rows in plan.md, sets `done` or `blocked` | fresh |
-| `/inspec:review` | `Review:` items in plan.md: do the ticked rows really hold, are States and Touches covered | fresh |
+| `/inspec:review` | fixes mechanical findings itself; `Review:` items in plan.md for the rest: do the ticked rows really hold, are States and Touches covered, is a one-way door reviewed deeply | fresh |
 | `/inspec:start` | nothing: runs the next step | any |
 | `/inspec:read` | nothing: opens an intent, spec or plan as a review page in the browser, loops edits until agreed | planning |
 
