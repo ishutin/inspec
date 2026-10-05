@@ -31,7 +31,7 @@ newest `done` one without a `Review:` line. The change is `<start>..HEAD`, `<sta
   check.
 - **Coding standards.** Read the repository's own coding-standards files if present (`CODING_STANDARDS.md`, or
   what its `CLAUDE.md` or `AGENTS.md` point to) and check the diff against them. Never create or propose such a
-  file: the repository owns its conventions.
+  file: the repository owns its conventions. With none, leave style alone; never what a linter catches.
 - **Defects you can show** on lines the diff adds or changes: a wrong result, a crash, a lost or leaked
   resource, a broken contract with a caller. Name the input or state that triggers it. Never what predates the
   diff.
@@ -39,7 +39,7 @@ newest `done` one without a `Review:` line. The change is `<start>..HEAD`, `<sta
 
 ## 3. Record
 
-**Mechanical** findings (coding standards, style, anything fixable with no behaviour change): fix them
+**Mechanical** findings (a breach of those standards, anything else fixable with no behaviour change): fix them
 yourself, run the delivery's checks and the repository's test, lint and type commands green, and commit the code
 alone (`refactor(<slug>): review D<n> fixes`). Everything about the contract (a row that does not hold, a missing
 state or touch, a lying check, a one-way-door concern) stays a finding for build.
